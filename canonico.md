@@ -12,7 +12,7 @@ Cualquier decisión técnica, de diseño o funcional debe validarse contra este 
 
 Construir una aplicación web que permita:
 
-> Organizar, visualizar y navegar documentos del Departamento de BI de EPEM mediante una estructura jerárquica clara, utilizando una interfaz moderna con estética inspirada en n8n.
+> Organizar, visualizar y navegar documentos del Departamento de BI de EPEM mediante una interfaz visual tipo canvas, con estética y comportamiento inspirado en n8n.
 
 ---
 
@@ -20,24 +20,25 @@ Construir una aplicación web que permita:
 
 El sistema ES:
 
-- Un explorador de documentos
-- Un gestor visual de información BI
-- Una estructura jerárquica (tipo árbol)
+- Un explorador visual de documentos
+- Un gestor de información BI con interfaz canvas
+- Nodos posicionables libremente
+- Conexiones visuales entre nodos relacionados
+- Estética y UX idéntica a n8n
 
 El sistema NO ES:
 
-- Un workflow engine
-- Un sistema tipo n8n funcional
-- Un canvas libre con conexiones
-- Un sistema de automatización
+- Un sistema de automatización de workflows
+- Un ejecutor de flujos (no ejecuta código)
+- Un sistema de integración tipo iPaaS
 
 ---
 
 ## 4. Principio Clave (Regla de Oro)
 
-> La estructura es un árbol.  
-> El estilo visual es tipo n8n.  
-> El comportamiento NO es n8n.
+> La interfaz ES tipo n8n (canvas + conexiones).  
+> El propósito ES navegar documentos (NO ejecutar workflows).  
+> Los nodos representan documentos/carpetas (NO acciones/nodos de automatización).
 
 ---
 
@@ -47,9 +48,10 @@ Comparación conceptual:
 
 | Concepto | Sistema |
 |--------|--------|
-| Estructura | Google Drive / Explorador de archivos |
-| Estética | n8n (solo visual) |
-| Comportamiento | Navegación jerárquica |
+| Interfaz | n8n (canvas libre + conexiones) |
+| Estética | n8n (tarjetas, colores, grid) |
+| Propósito | Explorador de documentos BI |
+| Datos | Jerarquía + relaciones visuales |
 
 ---
 
@@ -57,37 +59,45 @@ Comparación conceptual:
 
 El sistema debe permitir:
 
-- Navegar una jerarquía de carpetas y archivos
+- Canvas infinito con pan & zoom
+- Nodos posicionables con drag & drop
+- Conexiones visuales entre nodos (líneas bezier)
+- Navegar jerarquía de carpetas y archivos
 - Expandir y colapsar nodos
 - Visualizar información de cada nodo
 - Crear, editar y eliminar elementos
 - Buscar nodos en tiempo real
-- Persistir información localmente
+- Persistir información (posiciones + conexiones) localmente
 
 ---
 
-## 7. Restricciones (CRÍTICO)
+## 7. Restricciones
 
 Queda explícitamente prohibido:
 
-- Implementar conexiones entre nodos
-- Crear flujos tipo workflow
-- Usar canvas libre tipo drag & drop global
-- Convertir el sistema en un editor tipo n8n
+- Ejecutar workflows o automatizaciones
+- Conectar con APIs externas para ejecución
+- Simular que es un sistema de automatización real
+
+PERMITIDO:
+
+- Conexiones VISUALES entre nodos (solo representación)
+- Posicionamiento libre en canvas
+- Estética idéntica a n8n
 
 ---
 
 ## 8. Uso de n8n (Correcto)
 
-n8n se utiliza exclusivamente como referencia visual:
+n8n se utiliza como referencia COMPLETA:
 
-- Tarjetas (cards)
-- Bordes redondeados
-- Sombras suaves
+- Canvas con grid de puntos
+- Tarjetas (cards) con bordes redondeados
+- Conexiones curvas bezier entre nodos
 - Iconografía moderna
 - Microinteracciones
-
-NO se utiliza como referencia funcional.
+- Panel lateral para detalles
+- Zoom & pan del canvas
 
 ---
 
@@ -95,10 +105,9 @@ NO se utiliza como referencia funcional.
 
 El proyecto se considera desviado si ocurre alguno de los siguientes:
 
-- Se agregan conexiones entre nodos
-- Se pierde la estructura jerárquica
-- Se convierte en un sistema de workflows
-- Se prioriza estética sobre navegabilidad
+- Se intenta ejecutar workflows (no es un motor de ejecución)
+- Se pierde la capacidad de navegar documentos
+- Se prioriza funcionalidad sobre navegabilidad visual
 
 ---
 
@@ -106,10 +115,10 @@ El proyecto se considera desviado si ocurre alguno de los siguientes:
 
 Antes de implementar cualquier feature, validar:
 
-1. ¿Esto mejora la navegación de documentos?
-2. ¿Mantiene la estructura jerárquica?
-3. ¿Evita comportamientos tipo workflow?
-4. ¿Respeta el objetivo principal?
+1. ¿Esto mejora la experiencia visual de navegación?
+2. ¿Mantiene la estética de n8n?
+3. ¿Permite navegar documentos BI?
+4. ¿Respeta que NO es un motor de ejecución?
 
 Si alguna respuesta es "no" → NO implementar.
 
@@ -119,11 +128,10 @@ Si alguna respuesta es "no" → NO implementar.
 
 Este proyecto es:
 
-> Un sistema de navegación de documentos BI con estructura tipo árbol y estética moderna inspirada en n8n.
+> Un sistema de navegación visual de documentos BI con interfaz canvas tipo n8n, incluyendo posicionamiento libre y conexiones visuales entre nodos.
 
 ---
 
 ## 12. Frase Canónica (para recordar siempre)
 
-> “No estamos construyendo n8n.  
-> Estamos construyendo un explorador de documentos con apariencia de n8n.”
+> "Es n8n visualmente, pero es un explorador de documentos en propósito."

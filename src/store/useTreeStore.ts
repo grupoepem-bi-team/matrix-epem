@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { TreeNode, CreateNodeData, UpdateNodeData } from "../types";
+import type {
+  TreeNode,
+  CreateNodeData,
+  UpdateNodeData,
+  Position,
+  Viewport,
+} from "../types";
 import {
   addNodeToParent,
   addRootNode,
@@ -27,6 +33,8 @@ interface TreeState {
   searchQuery: string;
   /** Cached search results – recomputed whenever query or nodes change */
   searchResults: TreeNode[];
+  /** Viewport state for canvas (zoom & pan) */
+  viewport: Viewport;
 }
 
 /* ────────────────────────────────────────────── */
@@ -62,6 +70,10 @@ interface TreeActions {
   clearSearch: () => void;
   /** Reset the entire tree to the default sample data */
   resetToDefault: () => void;
+  /** Update viewport (zoom & pan) */
+  updateViewport: (viewport: Partial<Viewport>) => void;
+  /** Update node position */
+  updateNodePosition: (nodeId: string, position: Position) => void;
 }
 
 /* ────────────────────────────────────────────── */
@@ -100,6 +112,7 @@ export const useTreeStore = create<TreeState & TreeActions>()(
       expandedNodeIds: [],
       searchQuery: "",
       searchResults: [],
+      viewport: { zoom: 1, pan: { x: 0, y: 0 } },
 
       /* ── Selection ── */
       selectNode: (id) => {
@@ -231,6 +244,18 @@ export const useTreeStore = create<TreeState & TreeActions>()(
 
       clearSearch: () => {
         set({ searchQuery: "", searchResults: [] });
+      },
+
+      updateViewport: (viewportUpdate) => {
+        set((state) => ({
+          viewport: { ...state.viewport, ...viewportUpdate },
+        }));
+      },
+
+      updateNodePosition: (nodeId, position) => {
+        const { nodes } = get();
+        const updatedNodes = updateNodeById(nodes, nodeId, { position });
+        set({ nodes: updatedNodes });
       },
 
       /* ── Reset ── */
