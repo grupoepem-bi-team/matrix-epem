@@ -2,45 +2,7 @@ import React from "react";
 import { ChevronsDown, ChevronsUp, Search, FolderOpen } from "lucide-react";
 import { useTreeStore } from "../../store/useTreeStore";
 import { countNodes, countFolders, countDocuments } from "../../utils/tree";
-import { TreeNodeItem } from "./TreeNodeItem";
-import type { TreeNode } from "../../types";
-
-/* ────────────────────────────────────────────── */
-/*  Recursive sub-list – renders children only   */
-/*  when the parent folder is expanded            */
-/* ────────────────────────────────────────────── */
-
-interface TreeNodeListProps {
-  nodes: TreeNode[];
-  depth: number;
-}
-
-const TreeNodeList: React.FC<TreeNodeListProps> = React.memo(
-  ({ nodes, depth }) => {
-    const expandedNodeIds = useTreeStore((s) => s.expandedNodeIds);
-
-    return (
-      <>
-        {nodes.map((node) => {
-          const isExpanded = expandedNodeIds.includes(node.id);
-          const hasVisibleChildren =
-            node.type === "folder" && isExpanded && node.children.length > 0;
-
-          return (
-            <React.Fragment key={node.id}>
-              <TreeNodeItem node={node} depth={depth} />
-              {hasVisibleChildren && (
-                <TreeNodeList nodes={node.children} depth={depth + 1} />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </>
-    );
-  },
-);
-
-TreeNodeList.displayName = "TreeNodeList";
+import { TreeNode } from "./TreeNode";
 
 /* ────────────────────────────────────────────── */
 /*  Main TreeView container                       */
@@ -89,9 +51,11 @@ export const TreeView: React.FC = () => {
         {isSearchMode ? (
           /* ── Search mode: flat list of results ── */
           searchResults.length > 0 ? (
-            <div className="animate-fade-in" role="list">
+            <div className="tree animate-fade-in" role="list">
               {searchResults.map((node) => (
-                <TreeNodeItem key={node.id} node={node} depth={0} />
+                <div key={node.id} className="level">
+                  <TreeNode node={node} />
+                </div>
               ))}
             </div>
           ) : (
@@ -105,8 +69,12 @@ export const TreeView: React.FC = () => {
           )
         ) : hasNodes ? (
           /* ── Normal mode: recursive tree ── */
-          <div role="tree">
-            <TreeNodeList nodes={nodes} depth={0} />
+          <div className="tree" role="tree">
+            {nodes.map((node) => (
+              <div key={node.id} className="level">
+                <TreeNode node={node} />
+              </div>
+            ))}
           </div>
         ) : (
           /* ── Empty state: no nodes at all ── */
