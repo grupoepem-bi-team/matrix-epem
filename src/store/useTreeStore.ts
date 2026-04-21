@@ -16,6 +16,7 @@ import {
   createDefaultTree,
   createNode,
   getNodePath,
+  autoLayout,
 } from "../utils/tree";
 
 /* ────────────────────────────────────────────── */
@@ -180,8 +181,9 @@ export const useTreeStore = create<TreeState & TreeActions>()(
           data.metadata,
         );
         const { nodes, expandedNodeIds } = get();
-        const updatedNodes = addNodeToParent(nodes, parentId, newNode);
-        // Auto-expand the parent so the new child is visible
+        const withChild = addNodeToParent(nodes, parentId, newNode);
+        // Re-layout the whole tree so every node gets a correct position
+        const updatedNodes = autoLayout(withChild);
         const newExpanded = expandedNodeIds.includes(parentId)
           ? expandedNodeIds
           : [...expandedNodeIds, parentId];
@@ -201,7 +203,8 @@ export const useTreeStore = create<TreeState & TreeActions>()(
           data.metadata,
         );
         const { nodes } = get();
-        const updatedNodes = addRootNode(nodes, newNode);
+        const withRoot = addRootNode(nodes, newNode);
+        const updatedNodes = autoLayout(withRoot);
         set({
           nodes: updatedNodes,
           selectedNodeId: newNode.id,
@@ -225,8 +228,8 @@ export const useTreeStore = create<TreeState & TreeActions>()(
 
       deleteNode: (id) => {
         const { nodes, selectedNodeId } = get();
-        const updatedNodes = removeNodeById(nodes, id);
-        // If we deleted the selected node, clear selection
+        const removed = removeNodeById(nodes, id);
+        const updatedNodes = autoLayout(removed);
         const newSelectedId = selectedNodeId === id ? null : selectedNodeId;
         set({
           nodes: updatedNodes,
@@ -260,18 +263,28 @@ export const useTreeStore = create<TreeState & TreeActions>()(
 
       /* ── Reset ── */
       resetToDefault: () => {
-        const defaultNodes = createDefaultTree();
+        const raw = createDefaultTree();
+        const defaultNodes = autoLayout(raw);
+        // Expand every folder by default
+        const allFolderIds: string[] = [];
+        const collectFolders = (list: typeof defaultNodes) => {
+          for (const n of list) {
+            if (n.type === "folder") allFolderIds.push(n.id);
+            if (n.children.length > 0) collectFolders(n.children);
+          }
+        };
+        collectFolders(defaultNodes);
         set({
           nodes: defaultNodes,
           selectedNodeId: null,
-          expandedNodeIds: [defaultNodes[0]?.id].filter(Boolean),
+          expandedNodeIds: allFolderIds,
           searchQuery: "",
           searchResults: [],
         });
       },
     }),
     {
-      name: "matrix-epem-tree",
+      name: "matrix-epem-tree-v2",
       // Only persist the core data, not transient UI state like search
       partialize: (state) => ({
         nodes: state.nodes,
@@ -281,11 +294,22 @@ export const useTreeStore = create<TreeState & TreeActions>()(
       // On rehydration, if nodes are empty, seed with default data
       onRehydrateStorage: () => (state) => {
         if (state && state.nodes.length === 0) {
-          const defaultNodes = createDefaultTree();
+          const raw = createDefaultTree();
+          const defaultNodes = autoLayout(raw);
           state.nodes = defaultNodes;
-          state.expandedNodeIds = [defaultNodes[0]?.id].filter(
-            Boolean,
-          ) as string[];
+          // Expand all folders
+          const ids: string[] = [];
+          const walk = (list: typeof defaultNodes) => {
+            for (const n of list) {
+              if (n.type === "folder") ids.push(n.id);
+              if (n.children.length > 0) walk(n.children);
+            }
+          };
+          walk(defaultNodes);
+          state.expandedNodeIds = ids;
+        } else if (state) {
+          // Re-apply layout if nodes exist but may lack positions
+          state.nodes = autoLayout(state.nodes);
         }
       },
     },

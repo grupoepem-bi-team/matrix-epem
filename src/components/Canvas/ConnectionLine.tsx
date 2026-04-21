@@ -1,21 +1,12 @@
 import React from "react";
 
 interface ConnectionLineProps {
-  /** Starting X position (source node's right edge) */
   startX: number;
-  /** Starting Y position (source node's center) */
   startY: number;
-  /** Ending X position (target node's left edge) */
   endX: number;
-  /** Ending Y position (target node's center) */
   endY: number;
-  /** Connection color (default: n8n green) */
   color?: string;
-  /** Stroke width in pixels */
   strokeWidth?: number;
-  /** Whether the connection is animated (dashed) */
-  animated?: boolean;
-  /** Whether the connection is selected */
   selected?: boolean;
 }
 
@@ -24,58 +15,60 @@ export const ConnectionLine: React.FC<ConnectionLineProps> = ({
   startY,
   endX,
   endY,
-  color = "#4caf50",
+  color = "#555570",
   strokeWidth = 2,
-  animated = false,
   selected = false,
 }) => {
-  // Calculate control points for bezier curve
-  // The curve should flow smoothly from source to target
-  const deltaX = Math.abs(endX - startX);
-  const controlOffset = Math.max(deltaX * 0.5, 50);
+  const dist = Math.abs(endX - startX);
+  const curvature = Math.max(dist * 0.45, 60);
 
-  // Control points for smooth S-curve
-  const cp1X = startX + controlOffset;
+  const cp1X = startX + curvature;
   const cp1Y = startY;
-  const cp2X = endX - controlOffset;
+  const cp2X = endX - curvature;
   const cp2Y = endY;
 
-  // Create bezier path
   const path = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`;
 
-  // Selected style
   const strokeColor = selected ? "#ff6d5a" : color;
-  const finalStrokeWidth = selected ? 3 : strokeWidth;
+  const sw = selected ? strokeWidth + 1 : strokeWidth;
+
+  /* Arrow head — small triangle pointing in the direction of the bezier
+     at the target. We approximate the tangent from the last control
+     point to the endpoint. */
+  const angle = Math.atan2(endY - cp2Y, endX - cp2X);
+  const arrowLen = 9;
+  const arrowAngle = 0.45; // radians half-spread
+  const ax1 = endX - arrowLen * Math.cos(angle - arrowAngle);
+  const ay1 = endY - arrowLen * Math.sin(angle - arrowAngle);
+  const ax2 = endX - arrowLen * Math.cos(angle + arrowAngle);
+  const ay2 = endY - arrowLen * Math.sin(angle + arrowAngle);
 
   return (
     <g className="connection-line">
-      {/* Shadow/outline for better visibility */}
+      {/* Glow / shadow */}
       <path
         d={path}
         fill="none"
-        stroke="rgba(0,0,0,0.3)"
-        strokeWidth={finalStrokeWidth + 2}
+        stroke="rgba(0,0,0,0.35)"
+        strokeWidth={sw + 3}
         strokeLinecap="round"
-        opacity={0.3}
       />
 
-      {/* Main connection line */}
+      {/* Main line */}
       <path
         d={path}
         fill="none"
         stroke={strokeColor}
-        strokeWidth={finalStrokeWidth}
+        strokeWidth={sw}
         strokeLinecap="round"
-        strokeDasharray={animated ? "5,5" : undefined}
+        opacity={0.85}
       />
 
-      {/* Arrow head at target */}
-      <circle
-        cx={endX}
-        cy={endY}
-        r={selected ? 5 : 3}
+      {/* Arrow head */}
+      <polygon
+        points={`${endX},${endY} ${ax1},${ay1} ${ax2},${ay2}`}
         fill={strokeColor}
-        opacity={0.8}
+        opacity={0.85}
       />
     </g>
   );

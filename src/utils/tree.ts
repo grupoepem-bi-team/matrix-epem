@@ -1,5 +1,55 @@
 import type { TreeNode, NodeType } from "../types";
 
+/* ────────────────────────────────────────────── */
+/*  Auto-layout (tree positioning)               */
+/* ────────────────────────────────────────────── */
+
+const LAYOUT_NODE_W = 200; // matches NODE_WIDTH in NodeCard
+const LAYOUT_NODE_H = 80;  // matches NODE_HEIGHT in NodeCard
+const LAYOUT_H_GAP = 60;   // horizontal space between siblings
+const LAYOUT_V_GAP = 130;  // vertical space between levels
+
+/** Calculates the total width a subtree needs (node + all descendants). */
+export const calcSubtreeWidth = (node: TreeNode): number => {
+  if (node.children.length === 0) return LAYOUT_NODE_W;
+  const childrenW = node.children.reduce(
+    (sum, c) => sum + calcSubtreeWidth(c) + LAYOUT_H_GAP,
+    -LAYOUT_H_GAP,
+  );
+  return Math.max(LAYOUT_NODE_W, childrenW);
+};
+
+/**
+ * Recursively assigns (x, y) positions to every node so the whole tree
+ * is laid out top-down without any overlaps.
+ *
+ * @param nodes  - list of sibling nodes at the same level
+ * @param x0     - left edge where this group starts
+ * @param y0     - top of the current level
+ */
+export const autoLayout = (
+  nodes: TreeNode[],
+  x0 = 80,
+  y0 = 80,
+): TreeNode[] => {
+  let cursor = x0;
+  return nodes.map((node) => {
+    const sw = calcSubtreeWidth(node);
+    const nodeX = cursor + (sw - LAYOUT_NODE_W) / 2;
+    const positioned: TreeNode = {
+      ...node,
+      position: { x: nodeX, y: y0 },
+      children: autoLayout(
+        node.children,
+        cursor,
+        y0 + LAYOUT_NODE_H + LAYOUT_V_GAP,
+      ),
+    };
+    cursor += sw + LAYOUT_H_GAP;
+    return positioned;
+  });
+};
+
 /**
  * Generate a unique ID for new nodes
  */
