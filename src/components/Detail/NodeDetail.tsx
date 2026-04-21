@@ -1,348 +1,95 @@
-import { useMemo } from 'react';
-import { useTreeStore } from '../../store/useTreeStore';
-import { findNodeById, getNodePath } from '../../utils/tree';
-import type { TreeNode } from '../../types';
-
-/* ────────────────────────────────────────────── */
-/*  Props                                        */
-/* ────────────────────────────────────────────── */
+import React from "react";
+import { Folder, FileText, ChevronRight, Edit, Trash2, Plus } from "lucide-react";
+import { useTreeStore } from "../../store/useTreeStore";
+import { findNodeById, getNodePath } from "../../utils/tree";
 
 interface NodeDetailProps {
-  /** Called when the user clicks the Edit action button */
-  onEdit?: (nodeId: string) => void;
-  /** Called when the user clicks the "Add child" button on a folder */
-  onAddChild?: (parentId: string) => void;
+  onEdit: (nodeId: string) => void;
+  onAddChild: (parentId: string) => void;
+  onDelete: (nodeId: string) => void;
 }
 
-/* ────────────────────────────────────────────── */
-/*  Helpers                                      */
-/* ────────────────────────────────────────────── */
-
-const formatDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString('es-AR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-const TYPE_LABELS: Record<TreeNode['type'], string> = {
-  folder: 'Carpeta',
-  document: 'Documento',
-};
-
-/* ────────────────────────────────────────────── */
-/*  Component                                    */
-/* ────────────────────────────────────────────── */
-
-export function NodeDetail({ onEdit, onAddChild }: NodeDetailProps) {
-  const nodes = useTreeStore((s) => s.nodes);
+export const NodeDetail: React.FC<NodeDetailProps> = ({ onEdit, onAddChild, onDelete }) => {
   const selectedNodeId = useTreeStore((s) => s.selectedNodeId);
+  const nodes = useTreeStore((s) => s.nodes);
   const selectNode = useTreeStore((s) => s.selectNode);
-  const deleteNode = useTreeStore((s) => s.deleteNode);
 
-  const selectedNode = useMemo<TreeNode | null>(
-    () => (selectedNodeId ? findNodeById(nodes, selectedNodeId) : null),
-    [nodes, selectedNodeId],
-  );
+  const selectedNode = selectedNodeId ? findNodeById(nodes, selectedNodeId) : null;
+  const path = selectedNodeId ? getNodePath(nodes, selectedNodeId) : [];
 
-  const breadcrumbPath = useMemo<TreeNode[]>(
-    () => (selectedNodeId ? getNodePath(nodes, selectedNodeId) : []),
-    [nodes, selectedNodeId],
-  );
-
-  const metadataEntries = useMemo<[string, string][]>(
-    () => (selectedNode ? Object.entries(selectedNode.metadata) : []),
-    [selectedNode],
-  );
-
-  /* ── Empty state ── */
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch { return dateStr; }
+  };
 
   if (!selectedNode) {
     return (
-      <div className="empty-state">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <p
-          style={{
-            fontSize: '16px',
-            fontWeight: 500,
-            color: 'var(--color-n8n-text-secondary)',
-            maxWidth: '240px',
-          }}
-        >
-          Seleccioná un documento para ver sus detalles
-        </p>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 animate-fade-in">
+        <div className="w-16 h-16 rounded-2xl bg-surface border border-border flex items-center justify-center mb-4">
+          <FileText size={32} className="text-text-tertiary opacity-40" />
+        </div>
+        <h3 className="text-lg font-medium text-text mb-1">Selecciona un documento</h3>
+        <p className="text-sm text-text-tertiary text-center max-w-[280px]">Haz click en un nodo del arbol para ver su informacion aqui.</p>
       </div>
     );
   }
 
-  /* ── Detail view ── */
-
-  const badgeClass =
-    selectedNode.type === 'folder'
-      ? 'n8n-badge n8n-badge--folder'
-      : 'n8n-badge n8n-badge--document';
-
-  const childCount = selectedNode.children.length;
-  const childLabel =
-    childCount === 1 ? 'elemento hijo' : 'elementos hijos';
+  const isFolder = selectedNode.type === "folder";
 
   return (
-    <div
-      key={selectedNode.id}
-      className="animate-fade-in"
-      style={{ padding: '20px' }}
-    >
-      {/* ── Breadcrumb ── */}
-      <nav
-        aria-label="Ruta del nodo"
-        style={{
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '2px',
-          fontSize: '13px',
-        }}
-      >
-        {breadcrumbPath.map((node, index) => {
-          const isLast = index === breadcrumbPath.length - 1;
-          return (
-            <span
-              key={node.id}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}
-            >
-              {index > 0 && (
-                <span style={{ color: 'var(--color-n8n-text-tertiary)', margin: '0 2px' }}>
-                  /
-                </span>
-              )}
-              {isLast ? (
-                <span
-                  style={{ color: 'var(--color-n8n-text)', fontWeight: 600 }}
-                >
-                  {node.name}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => selectNode(node.id)}
-                  style={{
-                    border: 'none',
-                    background: 'none',
-                    color: 'var(--color-n8n-accent)',
-                    cursor: 'pointer',
-                    padding: '2px 4px',
-                    fontSize: '13px',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  {node.name}
-                </button>
-              )}
-            </span>
-          );
-        })}
-      </nav>
+    <div className="flex-1 overflow-y-auto p-6 animate-fade-in">
+      <div className="n8n-breadcrumb mb-6 flex items-center gap-1 flex-wrap">
+        {path.map((p, i) => (
+          <React.Fragment key={p.id}>
+            {i > 0 && <ChevronRight size={12} className="n8n-breadcrumb__separator text-text-tertiary" />}
+            <button className="n8n-breadcrumb__item text-text-secondary hover:text-accent" onClick={() => selectNode(p.id)}>{p.name}</button>
+          </React.Fragment>
+        ))}
+      </div>
 
-      {/* ── Detail Card ── */}
-      <div className="n8n-card" style={{ padding: '24px' }}>
-        {/* Badge + Name */}
-        <div>
-          <span className={badgeClass}>{TYPE_LABELS[selectedNode.type]}</span>
-          <h2
-            style={{
-              fontSize: '20px',
-              fontWeight: 700,
-              marginTop: '8px',
-              color: 'var(--color-n8n-text)',
-              lineHeight: 1.3,
-            }}
-          >
-            {selectedNode.name}
-          </h2>
+      <div className="n8n-card p-6 mb-6">
+        <div className="flex items-start gap-4 mb-5">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isFolder ? "bg-folder-bg border border-folder-border/30" : "bg-document-bg border border-document-border/30"}`}>
+            {isFolder ? <Folder size={24} className="text-folder-icon" /> : <FileText size={24} className="text-document-icon" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className={`n8n-badge ${isFolder ? "n8n-badge--folder" : "n8n-badge--document"}`}>{isFolder ? "CARPETA" : "DOCUMENTO"}</span>
+            <h2 className="text-xl font-semibold text-text truncate mt-1">{selectedNode.name}</h2>
+          </div>
         </div>
-
-        {/* Description */}
-        {selectedNode.description && (
-          <>
-            <div className="n8n-divider" />
-            <p
-              style={{
-                fontSize: '14px',
-                color: 'var(--color-n8n-text-secondary)',
-                lineHeight: 1.6,
-                margin: 0,
-              }}
-            >
-              {selectedNode.description}
-            </p>
-          </>
+        {selectedNode.description && <p className="text-sm text-text-secondary leading-relaxed mb-5">{selectedNode.description}</p>}
+        {Object.keys(selectedNode.metadata).length > 0 && (
+          <div className="mb-5">
+            <h4 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2">Metadatos</h4>
+            <table className="n8n-meta-table"><tbody>
+              {Object.entries(selectedNode.metadata).map(([key, value]) => (<tr key={key}><td>{key}</td><td>{value}</td></tr>))}
+            </tbody></table>
+          </div>
         )}
+        <div className="text-xs text-text-tertiary">
+          <p>Creado: <span className="text-text-secondary">{formatDate(selectedNode.createdAt)}</span></p>
+          <p>Actualizado: <span className="text-text-secondary">{formatDate(selectedNode.updatedAt)}</span></p>
+        </div>
+      </div>
 
-        {/* Metadata table */}
-        {metadataEntries.length > 0 && (
-          <>
-            <div className="n8n-divider" />
+      {isFolder && selectedNode.children.length > 0 && (
+        <div className="n8n-card p-4 mb-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h3
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: 'var(--color-n8n-text-tertiary)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  marginBottom: '8px',
-                  margin: '0 0 8px 0',
-                }}
-              >
-                Metadatos
-              </h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                <tbody>
-                  {metadataEntries.map(([key, value]) => (
-                    <tr
-                      key={key}
-                      style={{ borderBottom: '1px solid var(--color-n8n-border-light)' }}
-                    >
-                      <td
-                        style={{
-                          padding: '8px 12px 8px 0',
-                          color: 'var(--color-n8n-text-secondary)',
-                          fontWeight: 500,
-                          whiteSpace: 'nowrap',
-                          width: '40%',
-                        }}
-                      >
-                        {key}
-                      </td>
-                      <td style={{ padding: '8px 0', color: 'var(--color-n8n-text)' }}>
-                        {value}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <h4 className="text-sm font-medium text-text">Contenido</h4>
+              <p className="text-xs text-text-tertiary mt-0.5">{selectedNode.children.length} elemento{selectedNode.children.length !== 1 ? "s" : ""}</p>
             </div>
-          </>
-        )}
-
-        {/* Folder-specific: child count + Add child button */}
-        {selectedNode.type === 'folder' && (
-          <>
-            <div className="n8n-divider" />
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <span style={{ fontSize: '13px', color: 'var(--color-n8n-text-secondary)' }}>
-                {childCount} {childLabel}
-              </span>
-              {onAddChild && (
-                <button
-                  type="button"
-                  className="n8n-btn n8n-btn--primary n8n-btn--sm"
-                  onClick={() => onAddChild(selectedNode.id)}
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  >
-                    <path d="M12 5v14m-7-7h14" />
-                  </svg>
-                  Agregar hijo
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Dates */}
-        <div className="n8n-divider" />
-        <div
-          style={{
-            display: 'flex',
-            gap: '24px',
-            fontSize: '12px',
-            color: 'var(--color-n8n-text-tertiary)',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div>
-            <span style={{ fontWeight: 600 }}>Creado:</span>{' '}
-            {formatDate(selectedNode.createdAt)}
-          </div>
-          <div>
-            <span style={{ fontWeight: 600 }}>Modificado:</span>{' '}
-            {formatDate(selectedNode.updatedAt)}
+            <button type="button" className="n8n-btn n8n-btn--primary n8n-btn--sm" onClick={() => onAddChild(selectedNode.id)}><Plus size={14} />Agregar</button>
           </div>
         </div>
+      )}
 
-        {/* Action buttons */}
-        <div className="n8n-divider" />
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {onEdit && (
-            <button
-              type="button"
-              className="n8n-btn n8n-btn--sm"
-              onClick={() => onEdit(selectedNode.id)}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Editar
-            </button>
-          )}
-          <button
-            type="button"
-            className="n8n-btn n8n-btn--sm n8n-btn--danger"
-            onClick={() => deleteNode(selectedNode.id)}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 0v10m4-10v10m1-10V4a1 1 0 00-1-1h-2a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Eliminar
-          </button>
-        </div>
+      <div className="flex items-center gap-3">
+        <button type="button" className="n8n-btn n8n-btn--ghost flex-1" onClick={() => onEdit(selectedNode.id)}><Edit size={14} />Editar</button>
+        {isFolder && <button type="button" className="n8n-btn n8n-btn--ghost" onClick={() => onAddChild(selectedNode.id)}><Plus size={14} />Agregar hijo</button>}
+        <button type="button" className="n8n-btn n8n-btn--danger" onClick={() => { if (confirm(`Eliminar "${selectedNode.name}"?`)) { onDelete(selectedNode.id); } }}><Trash2 size={14} />Eliminar</button>
       </div>
     </div>
   );
-}
-
-export default NodeDetail;
+};
