@@ -1,54 +1,89 @@
 import type { TreeNode, NodeType } from "../types";
 
 /* ────────────────────────────────────────────── */
-/*  Auto-layout (tree positioning)               */
+/*  Layout constants (horizontal L→R flow)      */
 /* ────────────────────────────────────────────── */
 
-const LAYOUT_NODE_W = 200; // matches NODE_WIDTH in NodeCard
-const LAYOUT_NODE_H = 80;  // matches NODE_HEIGHT in NodeCard
-const LAYOUT_H_GAP = 60;   // horizontal space between siblings
-const LAYOUT_V_GAP = 130;  // vertical space between levels
+/** Node width — must match NodeCard component */
+export const NODE_WIDTH = 220;
+/** Node height — must match NodeCard component */
+export const NODE_HEIGHT = 80;
 
-/** Calculates the total width a subtree needs (node + all descendants). */
-export const calcSubtreeWidth = (node: TreeNode): number => {
-  if (node.children.length === 0) return LAYOUT_NODE_W;
-  const childrenW = node.children.reduce(
-    (sum, c) => sum + calcSubtreeWidth(c) + LAYOUT_H_GAP,
-    -LAYOUT_H_GAP,
-  );
-  return Math.max(LAYOUT_NODE_W, childrenW);
+/** Horizontal gap between depth levels (parent → child) */
+export const HORIZONTAL_GAP = 80;
+/** Vertical gap between sibling nodes */
+export const VERTICAL_GAP = 30;
+
+/* ────────────────────────────────────────────── */
+/*  Auto-layout (horizontal left → right)       */
+/* ────────────────────────────────────────────── */
+
+/**
+ * Calculates the total **vertical** height a subtree needs
+ * (node + all descendants stacked vertically).
+ *
+ * In a horizontal L→R layout:
+ * - X axis represents depth (parent on the left, children to the right)
+ * - Y axis represents sibling stacking (siblings arranged top-to-bottom)
+ *
+ * A leaf node occupies NODE_HEIGHT vertically.
+ * A parent node occupies the sum of its children's subtree heights
+ * plus VERTICAL_GAP between each pair of siblings.
+ */
+export const calcSubtreeHeight = (node: TreeNode): number => {
+  if (node.children.length === 0) return NODE_HEIGHT;
+
+  const childrenHeight =
+    node.children.reduce((sum, child) => sum + calcSubtreeHeight(child), 0) +
+    VERTICAL_GAP * (node.children.length - 1);
+
+  return Math.max(NODE_HEIGHT, childrenHeight);
 };
 
 /**
  * Recursively assigns (x, y) positions to every node so the whole tree
- * is laid out top-down without any overlaps.
+ * is laid out **horizontally left-to-right** (like n8n's workflow editor).
  *
- * @param nodes  - list of sibling nodes at the same level
- * @param x0     - left edge where this group starts
- * @param y0     - top of the current level
+ * - Root node starts on the LEFT
+ * - Children flow to the RIGHT
+ * - Siblings are stacked VERTICALLY with VERTICAL_GAP between them
+ * - Depth levels are separated by (NODE_WIDTH + HORIZONTAL_GAP)
+ * - Each parent is centered vertically within its subtree space
+ *
+ * @param nodes  - list of sibling nodes at the same depth level
+ * @param x0     - left edge X coordinate where this group starts
+ * @param y0     - top edge Y coordinate where this group starts
+ * @returns A new array of TreeNode objects with `position` set
  */
-export const autoLayout = (
-  nodes: TreeNode[],
-  x0 = 80,
-  y0 = 80,
-): TreeNode[] => {
-  let cursor = x0;
+export const autoLayout = (nodes: TreeNode[], x0 = 80, y0 = 40): TreeNode[] => {
+  let yCursor = y0;
+
   return nodes.map((node) => {
-    const sw = calcSubtreeWidth(node);
-    const nodeX = cursor + (sw - LAYOUT_NODE_W) / 2;
+    const subtreeH = calcSubtreeHeight(node);
+
+    // Center the node vertically within its subtree allocation
+    const nodeX = x0;
+    const nodeY = yCursor + (subtreeH - NODE_HEIGHT) / 2;
+
+    // Children are one depth level to the right
+    const childX = nodeX + NODE_WIDTH + HORIZONTAL_GAP;
+
     const positioned: TreeNode = {
       ...node,
-      position: { x: nodeX, y: y0 },
-      children: autoLayout(
-        node.children,
-        cursor,
-        y0 + LAYOUT_NODE_H + LAYOUT_V_GAP,
-      ),
+      position: { x: nodeX, y: nodeY },
+      children: autoLayout(node.children, childX, yCursor),
     };
-    cursor += sw + LAYOUT_H_GAP;
+
+    // Advance cursor past this subtree + the sibling gap
+    yCursor += subtreeH + VERTICAL_GAP;
+
     return positioned;
   });
 };
+
+/* ────────────────────────────────────────────── */
+/*  Tree utility functions                       */
+/* ────────────────────────────────────────────── */
 
 /**
  * Generate a unique ID for new nodes
@@ -168,7 +203,7 @@ export const updateNodeById = (
 };
 
 /**
- * Remove a node (and its children) by its ID
+ * Remove a node (and its subtree) by its ID
  */
 export const removeNodeById = (nodes: TreeNode[], id: string): TreeNode[] => {
   return nodes
@@ -180,7 +215,7 @@ export const removeNodeById = (nodes: TreeNode[], id: string): TreeNode[] => {
 };
 
 /**
- * Search nodes by name or description (case-insensitive)
+ * Search nodes by name, description, or metadata (case-insensitive)
  */
 export const searchNodes = (nodes: TreeNode[], query: string): TreeNode[] => {
   if (!query.trim()) return [];
@@ -274,68 +309,29 @@ export const createNode = (
 };
 
 /**
- * Create the default sample tree for EPEM BI
+ * Create the default sample tree for EPEM BI.
+ *
+ * Structure (horizontal L→R flow):
+ *
+ *   Departamento BI ──┬── Reportes ──────────┬── Reporte Mensual - KPIs
+ *                     │                      ├── Dashboard Ejecutivo
+ *                     │                      └── Reporte Trimestral
+ *                     ├── Procesos ETL ──────┬── ETL Ventas
+ *                     │                      └── ETL Recursos Humanos
+ *                     ├── Modelos de Datos ──── Modelo Star - Ventas
+ *                     └── Documentación ──────── Diccionario de Datos
+ *
+ * The root "Departamento BI" acts as the entry point (like n8n's trigger node).
+ * Positions are assigned via autoLayout() after construction.
  */
 export const createDefaultTree = (): TreeNode[] => {
-  const now = new Date().toISOString();
-
-  // Root node - centered at top
-  const rootFolder = createNode(
-    "Departamento BI",
-    "folder",
-    "Documentos del Departamento de Business Intelligence",
-  );
-  rootFolder.position = { x: 400, y: 50 };
-  rootFolder.createdAt = now;
-  rootFolder.updatedAt = now;
-
-  // Level 1 folders - spread horizontally
-  const reportesFolder = createNode(
-    "Reportes",
-    "folder",
-    "Reportes periódicos del departamento",
-  );
-  reportesFolder.position = { x: 50, y: 200 };
-  reportesFolder.createdAt = now;
-  reportesFolder.updatedAt = now;
-
-  const etlFolder = createNode(
-    "Procesos ETL",
-    "folder",
-    "Documentación de procesos ETL",
-  );
-  etlFolder.position = { x: 300, y: 200 };
-  etlFolder.createdAt = now;
-  etlFolder.updatedAt = now;
-
-  const modelosFolder = createNode(
-    "Modelos de Datos",
-    "folder",
-    "Modelos y diagramas de datos",
-  );
-  modelosFolder.position = { x: 550, y: 200 };
-  modelosFolder.createdAt = now;
-  modelosFolder.updatedAt = now;
-
-  const documentacionFolder = createNode(
-    "Documentación",
-    "folder",
-    "Documentación técnica general",
-  );
-  documentacionFolder.position = { x: 800, y: 200 };
-  documentacionFolder.createdAt = now;
-  documentacionFolder.updatedAt = now;
-
-  // Level 2 documents - under each folder
+  // ── Level 2: Documents under "Reportes" ──
   const reporteMensual = createNode(
     "Reporte Mensual - KPIs",
     "document",
     "Reporte mensual de indicadores clave de rendimiento",
     { formato: "PDF", tamaño: "2.4 MB" },
   );
-  reporteMensual.position = { x: 0, y: 350 };
-  reporteMensual.createdAt = now;
-  reporteMensual.updatedAt = now;
 
   const dashboardEjecutivo = createNode(
     "Dashboard Ejecutivo",
@@ -343,9 +339,6 @@ export const createDefaultTree = (): TreeNode[] => {
     "Dashboard con métricas ejecutivas del trimestre",
     { formato: "PBIX", tamaño: "15.8 MB" },
   );
-  dashboardEjecutivo.position = { x: 50, y: 480 };
-  dashboardEjecutivo.createdAt = now;
-  dashboardEjecutivo.updatedAt = now;
 
   const reporteTrimestral = createNode(
     "Reporte Trimestral",
@@ -353,25 +346,14 @@ export const createDefaultTree = (): TreeNode[] => {
     "Análisis comparativo del trimestre",
     { formato: "XLSX", tamaño: "5.1 MB" },
   );
-  reporteTrimestral.position = { x: 100, y: 610 };
-  reporteTrimestral.createdAt = now;
-  reporteTrimestral.updatedAt = now;
 
-  reportesFolder.children = [
-    reporteMensual,
-    dashboardEjecutivo,
-    reporteTrimestral,
-  ];
-
+  // ── Level 2: Documents under "Procesos ETL" ──
   const etlVentas = createNode(
     "ETL Ventas",
     "document",
     "Proceso de extracción, transformación y carga de datos de ventas",
     { formato: "DOCX", tamaño: "1.2 MB" },
   );
-  etlVentas.position = { x: 250, y: 350 };
-  etlVentas.createdAt = now;
-  etlVentas.updatedAt = now;
 
   const etlRRHH = createNode(
     "ETL Recursos Humanos",
@@ -379,42 +361,69 @@ export const createDefaultTree = (): TreeNode[] => {
     "Pipeline de integración de datos de RRHH",
     { formato: "DOCX", tamaño: "0.8 MB" },
   );
-  etlRRHH.position = { x: 300, y: 480 };
-  etlRRHH.createdAt = now;
-  etlRRHH.updatedAt = now;
 
-  etlFolder.children = [etlVentas, etlRRHH];
-
+  // ── Level 2: Documents under "Modelos de Datos" ──
   const modeloStar = createNode(
     "Modelo Star - Ventas",
     "document",
     "Esquema en estrella para el área de ventas",
     { formato: "PPTX", tamaño: "3.7 MB" },
   );
-  modeloStar.position = { x: 500, y: 350 };
-  modeloStar.createdAt = now;
-  modeloStar.updatedAt = now;
 
-  modelosFolder.children = [modeloStar];
-
+  // ── Level 2: Documents under "Documentación" ──
   const diccionarioDatos = createNode(
     "Diccionario de Datos",
     "document",
     "Glosario de campos y tablas del datawarehouse",
     { formato: "PDF", tamaño: "1.5 MB" },
   );
-  diccionarioDatos.position = { x: 750, y: 350 };
-  diccionarioDatos.createdAt = now;
-  diccionarioDatos.updatedAt = now;
 
+  // ── Level 1: Category folders ──
+  const reportesFolder = createNode(
+    "Reportes",
+    "folder",
+    "Reportes periódicos del departamento",
+  );
+  reportesFolder.children = [
+    reporteMensual,
+    dashboardEjecutivo,
+    reporteTrimestral,
+  ];
+
+  const etlFolder = createNode(
+    "Procesos ETL",
+    "folder",
+    "Documentación de procesos ETL",
+  );
+  etlFolder.children = [etlVentas, etlRRHH];
+
+  const modelosFolder = createNode(
+    "Modelos de Datos",
+    "folder",
+    "Modelos y diagramas de datos",
+  );
+  modelosFolder.children = [modeloStar];
+
+  const documentacionFolder = createNode(
+    "Documentación",
+    "folder",
+    "Documentación técnica general",
+  );
   documentacionFolder.children = [diccionarioDatos];
 
-  rootFolder.children = [
+  // ── Level 0: Root entry point (like n8n's trigger node) ──
+  const rootNode = createNode(
+    "Departamento BI",
+    "folder",
+    "Documentos del Departamento de Business Intelligence",
+  );
+  rootNode.children = [
     reportesFolder,
     etlFolder,
     modelosFolder,
     documentacionFolder,
   ];
 
-  return [rootFolder];
+  // Apply horizontal L→R auto-layout to assign positions
+  return autoLayout([rootNode]);
 };

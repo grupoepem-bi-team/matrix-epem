@@ -23,6 +23,14 @@ import {
 /*  State shape                                  */
 /* ────────────────────────────────────────────── */
 
+/**
+ * Store state for the tree.
+ *
+ * NOTE: Connections are NOT stored here. They are derived on-the-fly
+ * from the parent→child hierarchy (see Canvas.collectEdges).
+ * This means every TreeNode.children relationship implicitly defines
+ * a NodeConnection { source: parentId, target: childId }.
+ */
 interface TreeState {
   /** Root-level nodes of the tree */
   nodes: TreeNode[];
@@ -73,7 +81,7 @@ interface TreeActions {
   resetToDefault: () => void;
   /** Update viewport (zoom & pan) */
   updateViewport: (viewport: Partial<Viewport>) => void;
-  /** Update node position */
+  /** Update node position (after drag in canvas) */
   updateNodePosition: (nodeId: string, position: Position) => void;
 }
 
@@ -81,23 +89,27 @@ interface TreeActions {
 /*  Helpers                                      */
 /* ────────────────────────────────────────────── */
 
-/** Collect every folder ID in the tree (used by expandAll) */
-const collectAllFolderIds = (nodes: TreeNode[]): string[] => {
-  const ids: string[] = [];
-  const walk = (list: TreeNode[]) => {
-    for (const node of list) {
-      if (node.type === "folder") ids.push(node.id);
-      if (node.children.length > 0) walk(node.children);
-    }
-  };
-  walk(nodes);
-  return ids;
-};
-
 /** Recompute search results from nodes + query */
 const computeSearchResults = (nodes: TreeNode[], query: string): TreeNode[] => {
   if (!query.trim()) return [];
   return searchNodes(nodes, query);
+};
+
+/**
+ * Walk the tree and collect all folder IDs.
+ * Used by expandAll, resetToDefault, and onRehydrateStorage
+ * to auto-expand every folder.
+ */
+const collectFolderIds = (nodes: TreeNode[]): string[] => {
+  const ids: string[] = [];
+  const walk = (list: TreeNode[]) => {
+    for (const n of list) {
+      if (n.type === "folder") ids.push(n.id);
+      if (n.children.length > 0) walk(n.children);
+    }
+  };
+  walk(nodes);
+  return ids;
 };
 
 /* ────────────────────────────────────────────── */
@@ -165,7 +177,7 @@ export const useTreeStore = create<TreeState & TreeActions>()(
 
       expandAll: () => {
         const { nodes } = get();
-        set({ expandedNodeIds: collectAllFolderIds(nodes) });
+        set({ expandedNodeIds: collectFolderIds(nodes) });
       },
 
       collapseAll: () => {
@@ -183,6 +195,7 @@ export const useTreeStore = create<TreeState & TreeActions>()(
         const { nodes, expandedNodeIds } = get();
         const withChild = addNodeToParent(nodes, parentId, newNode);
         // Re-layout the whole tree so every node gets a correct position
+        // (horizontal L→R flow with NODE_WIDTH, NODE_HEIGHT, HORIZONTAL_GAP, VERTICAL_GAP)
         const updatedNodes = autoLayout(withChild);
         const newExpanded = expandedNodeIds.includes(parentId)
           ? expandedNodeIds
@@ -249,42 +262,38 @@ export const useTreeStore = create<TreeState & TreeActions>()(
         set({ searchQuery: "", searchResults: [] });
       },
 
+      /* ── Viewport ── */
       updateViewport: (viewportUpdate) => {
         set((state) => ({
           viewport: { ...state.viewport, ...viewportUpdate },
         }));
       },
 
+      /* ── Node position (updated after canvas drag) ── */
       updateNodePosition: (nodeId, position) => {
         const { nodes } = get();
         const updatedNodes = updateNodeById(nodes, nodeId, { position });
         set({ nodes: updatedNodes });
       },
 
-      /* ── Reset ── */
+      /* ── Reset ──
+         createDefaultTree() already applies autoLayout() internally,
+         so we don't need to call it again here. */
       resetToDefault: () => {
-        const raw = createDefaultTree();
-        const defaultNodes = autoLayout(raw);
-        // Expand every folder by default
-        const allFolderIds: string[] = [];
-        const collectFolders = (list: typeof defaultNodes) => {
-          for (const n of list) {
-            if (n.type === "folder") allFolderIds.push(n.id);
-            if (n.children.length > 0) collectFolders(n.children);
-          }
-        };
-        collectFolders(defaultNodes);
+        const defaultNodes = createDefaultTree();
+        const allFolderIds = collectFolderIds(defaultNodes);
         set({
           nodes: defaultNodes,
           selectedNodeId: null,
           expandedNodeIds: allFolderIds,
           searchQuery: "",
           searchResults: [],
+          viewport: { zoom: 1, pan: { x: 0, y: 0 } },
         });
       },
     }),
     {
-      name: "matrix-epem-tree-v2",
+      name: "matrix-epem-tree-v3",
       // Only persist the core data, not transient UI state like search
       partialize: (state) => ({
         nodes: state.nodes,
@@ -294,21 +303,13 @@ export const useTreeStore = create<TreeState & TreeActions>()(
       // On rehydration, if nodes are empty, seed with default data
       onRehydrateStorage: () => (state) => {
         if (state && state.nodes.length === 0) {
-          const raw = createDefaultTree();
-          const defaultNodes = autoLayout(raw);
+          // createDefaultTree() already includes layout (autoLayout called internally)
+          const defaultNodes = createDefaultTree();
           state.nodes = defaultNodes;
-          // Expand all folders
-          const ids: string[] = [];
-          const walk = (list: typeof defaultNodes) => {
-            for (const n of list) {
-              if (n.type === "folder") ids.push(n.id);
-              if (n.children.length > 0) walk(n.children);
-            }
-          };
-          walk(defaultNodes);
-          state.expandedNodeIds = ids;
+          state.expandedNodeIds = collectFolderIds(defaultNodes);
         } else if (state) {
-          // Re-apply layout if nodes exist but may lack positions
+          // Re-apply layout for existing persisted nodes in case
+          // layout constants (NODE_WIDTH, NODE_HEIGHT, gaps) changed
           state.nodes = autoLayout(state.nodes);
         }
       },

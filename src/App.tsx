@@ -16,16 +16,25 @@ import { CreateNodeDialog } from "./components/Actions/CreateNodeDialog";
 import { EditNodeDialog } from "./components/Actions/EditNodeDialog";
 import type { Position } from "./types";
 
+/* ────────────────────────────────────────────── */
+/*  Dialog state union                           */
+/* ────────────────────────────────────────────── */
+
 type DialogState =
   | { kind: "none" }
   | { kind: "edit"; nodeId: string }
   | { kind: "addChild"; parentId: string }
   | { kind: "addRoot" };
 
+/* ────────────────────────────────────────────── */
+/*  App component                                */
+/* ────────────────────────────────────────────── */
+
 export const App: React.FC = () => {
   const [dialog, setDialog] = useState<DialogState>({ kind: "none" });
   const [showPanel, setShowPanel] = useState(false);
 
+  /* ── Store selectors ── */
   const deleteNode = useTreeStore((s) => s.deleteNode);
   const updateNodePosition = useTreeStore((s) => s.updateNodePosition);
   const zoom = useTreeStore((s) => s.viewport.zoom);
@@ -34,6 +43,7 @@ export const App: React.FC = () => {
   const resetToDefault = useTreeStore((s) => s.resetToDefault);
   const selectedNodeId = useTreeStore((s) => s.selectedNodeId);
 
+  /* ── Dialog handlers ── */
   const handleClose = () => setDialog({ kind: "none" });
   const handleEdit = (nodeId: string) => setDialog({ kind: "edit", nodeId });
   const handleAddChild = (parentId: string) =>
@@ -45,6 +55,7 @@ export const App: React.FC = () => {
     setShowPanel(false);
   };
 
+  /* ── Canvas callbacks ── */
   const handleNodeSelect = useCallback((nodeId: string) => {
     useTreeStore.getState().selectNode(nodeId);
     setShowPanel(true);
@@ -56,6 +67,16 @@ export const App: React.FC = () => {
     },
     [updateNodePosition],
   );
+
+  /* ── Zoom controls ── */
+  const handleZoomIn = () =>
+    updateViewport({ zoom: Math.min(zoom * 1.2, 2.5), pan });
+
+  const handleZoomOut = () =>
+    updateViewport({ zoom: Math.max(zoom * 0.8, 0.2), pan });
+
+  const handleFitView = () =>
+    updateViewport({ zoom: 1, pan: { x: 80, y: 80 } });
 
   return (
     <div
@@ -110,8 +131,15 @@ export const App: React.FC = () => {
       {/* ══════════════════════════════════════════════ */}
       {/*  CANVAS + RIGHT PANEL                         */}
       {/* ══════════════════════════════════════════════ */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
-        {/* Canvas */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {/* Canvas area */}
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
           <Canvas onNodeSelect={handleNodeSelect} onNodeMove={handleNodeMove} />
 
@@ -120,9 +148,7 @@ export const App: React.FC = () => {
             <button
               type="button"
               className="n8n-btn n8n-btn--icon"
-              onClick={() =>
-                updateViewport({ zoom: Math.min(zoom * 1.2, 2.5), pan })
-              }
+              onClick={handleZoomIn}
               title="Acercar"
             >
               <ZoomIn size={15} />
@@ -131,9 +157,7 @@ export const App: React.FC = () => {
             <button
               type="button"
               className="n8n-btn n8n-btn--icon"
-              onClick={() =>
-                updateViewport({ zoom: Math.max(zoom * 0.8, 0.2), pan })
-              }
+              onClick={handleZoomOut}
               title="Alejar"
             >
               <ZoomOut size={15} />
@@ -142,7 +166,7 @@ export const App: React.FC = () => {
             <button
               type="button"
               className="n8n-btn n8n-btn--icon"
-              onClick={() => updateViewport({ zoom: 1, pan: { x: 80, y: 80 } })}
+              onClick={handleFitView}
               title="Restablecer vista"
             >
               <Maximize2 size={15} />
@@ -150,7 +174,7 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Node detail panel ── */}
+        {/* ── Node detail panel (right sidebar) ── */}
         {showPanel && selectedNodeId && (
           <aside className="detail-panel">
             <button
@@ -171,7 +195,7 @@ export const App: React.FC = () => {
       </div>
 
       {/* ══════════════════════════════════════════════ */}
-      {/*  DIALOGS                                       */}
+      {/*  DIALOGS                                      */}
       {/* ══════════════════════════════════════════════ */}
       {dialog.kind === "edit" && (
         <div

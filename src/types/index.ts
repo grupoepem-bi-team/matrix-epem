@@ -1,8 +1,9 @@
 /**
  * Tipos de datos para el Navegador de Documentos BI - EPEM
  *
- * Estructura: Canvas con nodos posicionables + conexiones visuales
+ * Estructura: Canvas con nodos posicionables + conexiones derivadas
  * Estética: Inspirada en n8n (canvas, tarjetas, conexiones bezier)
+ * Layout: Flujo horizontal izquierda → derecha
  * Propósito: Navegación visual de documentos (NO ejecución de workflows)
  */
 
@@ -17,7 +18,8 @@ export interface Position {
 
 /**
  * Representa un nodo en el canvas.
- * Cada nodo tiene una posición (x, y) y puede tener conexiones visuales.
+ * Cada nodo tiene una posición (x, y) y puede tener hijos.
+ * Las conexiones visuales se derivan de la relación padre → hijos.
  */
 export interface TreeNode {
   /** Identificador único del nodo */
@@ -28,7 +30,7 @@ export interface TreeNode {
   type: NodeType;
   /** Descripción del contenido o propósito del nodo */
   description: string;
-  /** Nodos hijos (relación jerárquica) */
+  /** Nodos hijos (relación jerárquica - de aquí se derivan las conexiones) */
   children: TreeNode[];
   /** Metadatos adicionales clave-valor (formato, tamaño, autor, etc.) */
   metadata: Record<string, string>;
@@ -36,7 +38,7 @@ export interface TreeNode {
   createdAt: string;
   /** Fecha de última modificación en formato ISO 8601 */
   updatedAt: string;
-  /** Posición en el canvas (para UI tipo n8n) */
+  /** Posición en el canvas (para UI tipo n8n, layout horizontal L→R) */
   position?: Position;
   /** Dimensiones del nodo en píxeles (calculado automáticamente) */
   dimensions?: { width: number; height: number };
@@ -45,20 +47,15 @@ export interface TreeNode {
 }
 
 /**
- * Representa una conexión visual entre dos nodos.
- * Las conexiones son SOLO visuales - no representan flujo de ejecución.
+ * Conexión visual derivada de la jerarquía padre → hijo.
+ * Se genera automáticamente a partir de TreeNode.children.
+ * No se crea ni se elimina independientemente.
  */
 export interface NodeConnection {
-  /** Identificador único de la conexión */
-  id: string;
-  /** ID del nodo origen */
+  /** ID del nodo padre (origen - lado izquierdo) */
   source: string;
-  /** ID del nodo destino */
+  /** ID del nodo hijo (destino - lado derecho) */
   target: string;
-  /** Tipo de conexión (visual) */
-  type: "hierarchy" | "reference";
-  /** Fecha de creación */
-  createdAt: string;
 }
 
 /** Datos necesarios para crear un nuevo nodo */
@@ -68,6 +65,7 @@ export interface CreateNodeData {
   description?: string;
   metadata?: Record<string, string>;
   position?: Position;
+  parentId?: string;
 }
 
 /** Datos para actualizar un nodo existente */
@@ -77,13 +75,6 @@ export interface UpdateNodeData {
   metadata?: Record<string, string>;
   position?: Position;
   expanded?: boolean;
-}
-
-/** Datos para crear una conexión */
-export interface CreateConnectionData {
-  source: string;
-  target: string;
-  type?: "hierarchy" | "reference";
 }
 
 /** Estado del viewport del canvas */
@@ -96,10 +87,8 @@ export interface Viewport {
 
 /** Estado completo del árbol para persistencia */
 export interface TreeState {
-  /** Nodos raíz del árbol */
+  /** Nodos raíz del árbol (normalmente un solo root como entry point) */
   nodes: TreeNode[];
-  /** Conexiones entre nodos */
-  connections: NodeConnection[];
   /** Viewport del canvas */
   viewport: Viewport;
 }
