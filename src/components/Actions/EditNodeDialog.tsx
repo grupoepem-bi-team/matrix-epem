@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTreeStore } from "@/store/useTreeStore";
 import { findNodeById } from "@/utils/tree";
-import type { NodeType } from "@/types";
+import { getNodeTypeConfigOrDefault } from "@/registry";
 
 /* ────────────────────────────────────────────── */
 /*  Types                                        */
@@ -23,16 +23,6 @@ interface MetadataEntry {
 /* ────────────────────────────────────────────── */
 
 const generateEntryId = (): string => crypto.randomUUID();
-
-const NODE_TYPE_LABELS: Record<NodeType, string> = {
-  folder: "Carpeta",
-  document: "Documento",
-};
-
-const NODE_TYPE_BADGE: Record<NodeType, string> = {
-  folder: "n8n-badge n8n-badge--folder",
-  document: "n8n-badge n8n-badge--document",
-};
 
 const formatDateEsAR = (isoString: string): string => {
   const date = new Date(isoString);
@@ -167,7 +157,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
     return (
       <div className="animate-slide-up" onKeyDown={handleKeyDown}>
         <div className="n8n-card p-6">
-          <p className="text-sm text-[var(--color-n8n-text-tertiary)]">
+          <p className="text-sm text-(--color-n8n-text-tertiary)">
             No se encontró el nodo solicitado.
           </p>
           <button
@@ -182,14 +172,14 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
     );
   }
 
-  const nodeType = node.type as NodeType;
+  const config = getNodeTypeConfigOrDefault(node.type);
 
   return (
     <div className="animate-slide-up" onKeyDown={handleKeyDown}>
       <div className="n8n-card p-6">
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-[var(--color-n8n-text)]">Editar nodo</h3>
+          <h3 className="text-base font-semibold text-(--color-n8n-text)">Editar nodo</h3>
           <button
             type="button"
             className="n8n-btn n8n-btn--ghost n8n-btn--icon n8n-btn--sm"
@@ -205,25 +195,23 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* ── Node type (read-only) ── */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-[var(--color-n8n-text-secondary)]">
-              Tipo
-            </label>
-            <span className={NODE_TYPE_BADGE[nodeType]}>{NODE_TYPE_LABELS[nodeType]}</span>
+            <label className="text-xs font-medium text-(--color-n8n-text-secondary)">Tipo</label>
+            <span className={config.badgeClass}>{config.label.toUpperCase()}</span>
           </div>
 
           {/* ── Name ── */}
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="edit-node-name"
-              className="text-xs font-medium text-[var(--color-n8n-text-secondary)]"
+              className="text-xs font-medium text-(--color-n8n-text-secondary)"
             >
-              Nombre <span className="text-[var(--color-n8n-danger)]">*</span>
+              Nombre <span className="text-(--color-n8n-danger)">*</span>
             </label>
             <input
               ref={nameRef}
               id="edit-node-name"
               type="text"
-              className={`n8n-input ${nameError ? "border-[var(--color-n8n-danger)]" : ""}`}
+              className={`n8n-input ${nameError ? "border-(--color-n8n-danger)" : ""}`}
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
@@ -233,9 +221,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
               autoComplete="off"
             />
             {nameError && (
-              <span className="text-xs text-[var(--color-n8n-danger)]">
-                El nombre es obligatorio
-              </span>
+              <span className="text-xs text-(--color-n8n-danger)">El nombre es obligatorio</span>
             )}
           </div>
 
@@ -243,7 +229,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="edit-node-description"
-              className="text-xs font-medium text-[var(--color-n8n-text-secondary)]"
+              className="text-xs font-medium text-(--color-n8n-text-secondary)"
             >
               Descripción
             </label>
@@ -260,7 +246,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
           {/* ── Metadata ── */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-[var(--color-n8n-text-secondary)]">
+              <label className="text-xs font-medium text-(--color-n8n-text-secondary)">
                 Metadatos
               </label>
               <button
@@ -273,7 +259,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
             </div>
 
             {metadataEntries.length === 0 && (
-              <p className="text-xs text-[var(--color-n8n-text-tertiary)]">
+              <p className="text-xs text-(--color-n8n-text-tertiary)">
                 Sin metadatos. Presioná "Agregar" para añadir campos.
               </p>
             )}
@@ -299,7 +285,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
                   />
                   <button
                     type="button"
-                    className="n8n-btn n8n-btn--ghost n8n-btn--icon n8n-btn--sm text-[var(--color-n8n-danger)]"
+                    className="n8n-btn n8n-btn--ghost n8n-btn--icon n8n-btn--sm text-(--color-n8n-danger)"
                     onClick={() => removeMetadataEntry(entry.id)}
                     aria-label="Eliminar metadato"
                   >
@@ -313,7 +299,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
           <div className="n8n-divider" />
 
           {/* ── Last modified ── */}
-          <p className="text-xs text-[var(--color-n8n-text-tertiary)]">
+          <p className="text-xs text-(--color-n8n-text-tertiary)">
             Última modificación: {formatDateEsAR(node.updatedAt)}
           </p>
 

@@ -1,7 +1,8 @@
 import React from "react";
-import { Folder, FileText, ChevronRight, Edit, Trash2, Plus } from "lucide-react";
+import { FileText, ChevronRight, Edit, Trash2, Plus } from "lucide-react";
 import { useTreeStore } from "@/store/useTreeStore";
 import { findNodeById, getNodePath } from "@/utils/tree";
+import { getNodeTypeConfigOrDefault } from "@/registry";
 
 interface NodeDetailProps {
   onEdit: (nodeId: string) => void;
@@ -38,14 +39,15 @@ export const NodeDetail: React.FC<NodeDetailProps> = ({ onEdit, onAddChild, onDe
           <FileText size={32} className="text-text-tertiary opacity-40" />
         </div>
         <h3 className="text-lg font-medium text-text mb-1">Selecciona un documento</h3>
-        <p className="text-sm text-text-tertiary text-center max-w-[280px]">
+        <p className="text-sm text-text-tertiary text-center max-w-sidebar">
           Haz click en un nodo del arbol para ver su informacion aqui.
         </p>
       </div>
     );
   }
 
-  const isFolder = selectedNode.type === "folder";
+  const config = getNodeTypeConfigOrDefault(selectedNode.type);
+  const IconComponent = config.icon;
 
   return (
     <div className="flex-1 overflow-y-auto p-6 animate-fade-in">
@@ -68,18 +70,16 @@ export const NodeDetail: React.FC<NodeDetailProps> = ({ onEdit, onAddChild, onDe
       <div className="n8n-card p-6 mb-6">
         <div className="flex items-start gap-4 mb-5">
           <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isFolder ? "bg-folder-bg border border-folder-border/30" : "bg-document-bg border border-document-border/30"}`}
+            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+            style={{
+              background: config.iconBg,
+              border: `1px solid ${config.color}4D`,
+            }}
           >
-            {isFolder ? (
-              <Folder size={24} className="text-folder-icon" />
-            ) : (
-              <FileText size={24} className="text-document-icon" />
-            )}
+            <IconComponent size={24} style={{ color: config.color }} />
           </div>
           <div className="flex-1 min-w-0">
-            <span className={`n8n-badge ${isFolder ? "n8n-badge--folder" : "n8n-badge--document"}`}>
-              {isFolder ? "CARPETA" : "DOCUMENTO"}
-            </span>
+            <span className={config.badgeClass}>{config.label.toUpperCase()}</span>
             <h2 className="text-xl font-semibold text-text truncate mt-1">{selectedNode.name}</h2>
           </div>
         </div>
@@ -117,7 +117,7 @@ export const NodeDetail: React.FC<NodeDetailProps> = ({ onEdit, onAddChild, onDe
         </div>
       </div>
 
-      {isFolder && selectedNode.children.length > 0 && (
+      {config.canHaveChildren && selectedNode.children.length > 0 && (
         <div className="n8n-card p-4 mb-6">
           <div className="flex items-center justify-between">
             <div>
@@ -148,7 +148,7 @@ export const NodeDetail: React.FC<NodeDetailProps> = ({ onEdit, onAddChild, onDe
           <Edit size={14} />
           Editar
         </button>
-        {isFolder && (
+        {config.canHaveChildren && (
           <button
             type="button"
             className="n8n-btn n8n-btn--ghost"

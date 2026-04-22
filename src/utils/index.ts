@@ -1,7 +1,13 @@
 /**
- * @deprecated Import from "@/utils/treeData", "@/utils/treeLayout", or "@/utils/treeSearch" instead.
- * This barrel file is kept for backward compatibility.
+ * Barrel file for @/utils — re-exports everything from the tree sub-modules
+ * so that existing imports like `import { ... } from "@/utils/tree"` still work.
+ *
+ * Prefer importing from the specific sub-modules directly:
+ *   import { findNodeById } from "@/utils/treeSearch";
+ *   import { autoLayout } from "@/utils/treeLayout";
+ *   import { createNode } from "@/utils/treeData";
  */
+
 export {
   generateId,
   createNode,
@@ -11,6 +17,7 @@ export {
   removeNodeById,
   createDefaultTree,
 } from "./treeData";
+
 export {
   NODE_WIDTH,
   NODE_HEIGHT,
@@ -20,7 +27,9 @@ export {
   autoLayout,
   calculateNewNodePosition,
 } from "./treeLayout";
+
 export type { Edge } from "./treeSearch";
+
 export {
   buildNodeMap,
   flattenAll,

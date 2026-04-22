@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Folder, FileText } from "lucide-react";
 import type { TreeNode, Position } from "@/types";
+import { getNodeTypeConfigOrDefault } from "@/registry";
 
-/* ── Layout constants (must match utils/tree.ts) ── */
+/* ── Layout constants (must match utils/treeLayout.ts) ── */
 export const NODE_WIDTH = 220;
 export const NODE_HEIGHT = 80;
 
@@ -44,20 +44,16 @@ const NodeCard: React.FC<NodeCardProps> = ({
     };
   }, []);
 
-  /* ── Derived values ──────────────────────────── */
-  const isFolder = node.type === "folder";
-  const subtitle = isFolder
-    ? `${node.children.length} elemento${node.children.length !== 1 ? "s" : ""}`
-    : (node.metadata?.["formato"] ?? "Documento");
+  /* ── Registry-based visual config ──────────────── */
+  const config = getNodeTypeConfigOrDefault(node.type);
+  const IconComponent = config.icon;
+  const subtitle = config.getSubtitle(node);
 
   const accentColor = "#ff6d5a";
-  const portColor = isSelected ? accentColor : isFolder ? "#ffb74d" : "#64b5f6";
+  const portColor = isSelected ? accentColor : config.portColorMuted;
   const portGlow = isSelected
     ? `0 0 0 3px rgba(255, 109, 90, 0.25)`
-    : isFolder
-      ? `0 0 0 3px rgba(255, 183, 77, 0.22)`
-      : `0 0 0 3px rgba(100, 181, 246, 0.22)`;
-  const stripeColor = isFolder ? "#ffb74d" : "#64b5f6";
+    : `0 0 0 3px ${config.color}38`;
 
   /* ── Drag handling ───────────────────────────── */
   const handleMouseDown = useCallback(
@@ -128,12 +124,15 @@ const NodeCard: React.FC<NodeCardProps> = ({
   const displayX = position.x + dragOffset.x;
   const displayY = position.y + dragOffset.y;
 
+  /* ── CSS class for node type ──────────────────── */
+  const typeClass = config.canHaveChildren ? "wf-node--folder" : "wf-node--document";
+
   /* ── Render ───────────────────────────────────── */
   return (
     <div
       className={[
         "wf-node",
-        isFolder ? "wf-node--folder" : "wf-node--document",
+        typeClass,
         isSelected ? "wf-node--selected" : "",
         isDragging ? "wf-node--dragging" : "",
       ]
@@ -154,7 +153,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
       onMouseDown={handleMouseDown}
     >
       {/* ── Left coloured stripe ── */}
-      <div className="wf-node__stripe" style={{ backgroundColor: stripeColor }} />
+      <div className="wf-node__stripe" style={{ backgroundColor: config.stripeColor }} />
 
       {/* ── Input port (left side) ── */}
       <div
@@ -167,8 +166,8 @@ const NodeCard: React.FC<NodeCardProps> = ({
       />
 
       {/* ── Icon area ── */}
-      <div className="wf-node__icon">
-        {isFolder ? <Folder size={20} /> : <FileText size={20} />}
+      <div className="wf-node__icon" style={{ background: config.iconBg, color: config.color }}>
+        <IconComponent size={20} />
       </div>
 
       {/* ── Title & subtitle ── */}
@@ -210,6 +209,8 @@ const NodeCard: React.FC<NodeCardProps> = ({
 const NodeCardMemo = React.memo(NodeCard, (prev, next) => {
   return (
     prev.node.id === next.node.id &&
+    prev.node.type === next.node.type &&
+    prev.node.name === next.node.name &&
     prev.isSelected === next.isSelected &&
     prev.position.x === next.position.x &&
     prev.position.y === next.position.y &&

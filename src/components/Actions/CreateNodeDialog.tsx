@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTreeStore } from "@/store/useTreeStore";
 import type { NodeType } from "@/types";
+import { getAllNodeTypeConfigs } from "@/registry";
 
 /* ────────────────────────────────────────────── */
 /*  Props                                        */
@@ -28,6 +29,9 @@ interface MetadataEntry {
 /* ────────────────────────────────────────────── */
 
 let metadataIdCounter = 0;
+
+/** Cached list of all registered node type configs (computed once) */
+const nodeTypeConfigs = getAllNodeTypeConfigs();
 
 export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
   const createChildNode = useTreeStore((s) => s.createChildNode);
@@ -196,32 +200,23 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
             )}
           </div>
 
-          {/* ── Type (radio) ── */}
+          {/* ── Type (radio) — dynamically rendered from registry ── */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-n8n-text-secondary mb-2">Tipo</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="node-type"
-                  value="folder"
-                  checked={nodeType === "folder"}
-                  onChange={() => setNodeType("folder")}
-                  className="accent-n8n-accent"
-                />
-                <span className="n8n-badge n8n-badge--folder">Carpeta</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="node-type"
-                  value="document"
-                  checked={nodeType === "document"}
-                  onChange={() => setNodeType("document")}
-                  className="accent-n8n-accent"
-                />
-                <span className="n8n-badge n8n-badge--document">Documento</span>
-              </label>
+            <div className="flex gap-4 flex-wrap">
+              {nodeTypeConfigs.map((cfg) => (
+                <label key={cfg.type} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="node-type"
+                    value={cfg.type}
+                    checked={nodeType === cfg.type}
+                    onChange={() => setNodeType(cfg.type as NodeType)}
+                    className="accent-n8n-accent"
+                  />
+                  <span className={cfg.badgeClass}>{cfg.label}</span>
+                </label>
+              ))}
             </div>
           </div>
 
