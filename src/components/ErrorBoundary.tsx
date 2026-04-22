@@ -34,42 +34,48 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
         return this.props.fallback;
       }
       return (
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          background: "#12121a",
-          color: "#e8e8f0",
-          fontFamily: "Inter, sans-serif",
-          padding: "2rem",
-        }}>
-          <div style={{
-            background: "#1e1e2f",
-            border: "1px solid #f44336",
-            borderRadius: 12,
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100vh",
+            background: "#12121a",
+            color: "#e8e8f0",
+            fontFamily: "Inter, sans-serif",
             padding: "2rem",
-            maxWidth: 480,
-            textAlign: "center",
-          }}>
+          }}
+        >
+          <div
+            style={{
+              background: "#1e1e2f",
+              border: "1px solid #f44336",
+              borderRadius: 12,
+              padding: "2rem",
+              maxWidth: 480,
+              textAlign: "center",
+            }}
+          >
             <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: "#f44336" }}>
               Algo salió mal
             </h2>
             <p style={{ fontSize: 13, color: "#a0a0b8", marginBottom: 16 }}>
               Se produjo un error inesperado en la aplicación.
             </p>
-            <pre style={{
-              fontSize: 11,
-              color: "#7878a0",
-              background: "#12121a",
-              padding: 12,
-              borderRadius: 8,
-              overflow: "auto",
-              maxHeight: 120,
-              marginBottom: 16,
-              textAlign: "left",
-            }}>
+            <pre
+              style={{
+                fontSize: 11,
+                color: "#7878a0",
+                background: "#12121a",
+                padding: 12,
+                borderRadius: 8,
+                overflow: "auto",
+                maxHeight: 120,
+                marginBottom: 16,
+                textAlign: "left",
+              }}
+            >
               {this.state.error?.message}
             </pre>
             <button

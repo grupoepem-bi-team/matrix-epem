@@ -1,13 +1,7 @@
-import React, {
-  useState,
-  useCallback,
-  useRef,
-  useMemo,
-  useEffect,
-} from "react";
-import { useTreeStore } from "../../store/useTreeStore";
-import { flattenAll, collectEdges, buildNodeMap } from "../../utils/tree";
-import type { TreeNode, Position } from "../../types";
+import React, { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { useTreeStore } from "@/store/useTreeStore";
+import { flattenAll, collectEdges, buildNodeMap } from "@/utils/tree";
+import type { TreeNode, Position } from "@/types";
 import { NodeCard, NODE_WIDTH, NODE_HEIGHT } from "./NodeCard";
 import { ConnectionLine } from "./ConnectionLine";
 
@@ -83,10 +77,7 @@ const Minimap: React.FC<{
   }, [allNodes]);
 
   /* Scale factor: fit the bounding box into the minimap */
-  const scale = useMemo(
-    () => Math.min(MINIMAP_W / bbox.w, MINIMAP_H / bbox.h),
-    [bbox],
-  );
+  const scale = useMemo(() => Math.min(MINIMAP_W / bbox.w, MINIMAP_H / bbox.h), [bbox]);
 
   /* Offset so the bounding box is centered in the minimap */
   const ox = (MINIMAP_W - bbox.w * scale) / 2 - bbox.x * scale;
@@ -160,11 +151,7 @@ const Minimap: React.FC<{
 
 /* ── Canvas ─────────────────────────────────────── */
 
-const CanvasInner: React.FC<CanvasProps> = ({
-  onNodeSelect,
-  onNodeMove,
-  onReorganize,
-}) => {
+const CanvasInner: React.FC<CanvasProps> = ({ onNodeSelect, onNodeMove, onReorganize }) => {
   const nodes = useTreeStore((s) => s.nodes);
   const selectedNodeId = useTreeStore((s) => s.selectedNodeId);
   const zoom = useTreeStore((s) => s.viewport.zoom);
@@ -408,8 +395,7 @@ const CanvasInner: React.FC<CanvasProps> = ({
           inset: 0,
           pointerEvents: "none",
           zIndex: 0,
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
           backgroundSize: gridStyle.backgroundSize,
           backgroundPosition: gridStyle.backgroundPosition,
         }}
@@ -445,9 +431,7 @@ const CanvasInner: React.FC<CanvasProps> = ({
             const src = nodeMap.get(edge.sourceId);
             const tgt = nodeMap.get(edge.targetId);
             if (!src?.position || !tgt?.position) return null;
-            const isActive =
-              selectedNodeId === edge.sourceId ||
-              selectedNodeId === edge.targetId;
+            const isActive = selectedNodeId === edge.sourceId || selectedNodeId === edge.targetId;
             return (
               <ConnectionLine
                 key={edge.id}

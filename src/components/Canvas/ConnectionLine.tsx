@@ -44,8 +44,7 @@ const ConnectionLineInner: React.FC<ConnectionLineProps> = ({
   const cp2Y = endY;
 
   const path = useMemo(
-    () =>
-      `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`,
+    () => `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`,
     [startX, startY, cp1X, cp1Y, cp2X, cp2Y, endX, endY],
   );
 
@@ -73,9 +72,7 @@ const ConnectionLineInner: React.FC<ConnectionLineProps> = ({
 
   /* ── Render ──────────────────────────────────── */
   return (
-    <g
-      className={`connection-line${selected ? " connection-line--selected" : ""}`}
-    >
+    <g className={`connection-line${selected ? " connection-line--selected" : ""}`}>
       {/* Background shadow for depth */}
       <path
         d={path}
@@ -119,11 +116,7 @@ const ConnectionLineInner: React.FC<ConnectionLineProps> = ({
       />
 
       {/* Arrow head */}
-      <polygon
-        points={arrowPoints}
-        fill={activeColor}
-        opacity={selected ? 1 : 0.85}
-      />
+      <polygon points={arrowPoints} fill={activeColor} opacity={selected ? 1 : 0.85} />
     </g>
   );
 };

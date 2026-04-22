@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Folder, FileText } from "lucide-react";
-import type { TreeNode, Position } from "../../types";
+import type { TreeNode, Position } from "@/types";
 
 /* ── Layout constants (must match utils/tree.ts) ── */
 export const NODE_WIDTH = 220;
@@ -154,10 +154,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
       onMouseDown={handleMouseDown}
     >
       {/* ── Left coloured stripe ── */}
-      <div
-        className="wf-node__stripe"
-        style={{ backgroundColor: stripeColor }}
-      />
+      <div className="wf-node__stripe" style={{ backgroundColor: stripeColor }} />
 
       {/* ── Input port (left side) ── */}
       <div

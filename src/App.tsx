@@ -30,9 +30,7 @@ type DialogState =
   | { kind: "addChild"; parentId: string }
   | { kind: "addRoot" };
 
-type ConfirmState =
-  | { kind: "none" }
-  | { kind: "confirm"; nodeId: string; nodeName: string };
+type ConfirmState = { kind: "none" } | { kind: "confirm"; nodeId: string; nodeName: string };
 
 /* ────────────────────────────────────────────── */
 /*  App component                                */
@@ -59,8 +57,7 @@ export const App: React.FC = () => {
   /* ── Dialog handlers ── */
   const handleClose = () => setDialog({ kind: "none" });
   const handleEdit = (nodeId: string) => setDialog({ kind: "edit", nodeId });
-  const handleAddChild = (parentId: string) =>
-    setDialog({ kind: "addChild", parentId });
+  const handleAddChild = (parentId: string) => setDialog({ kind: "addChild", parentId });
   const handleAddRoot = () => setDialog({ kind: "addRoot" });
 
   const handleDelete = (nodeId: string) => {
@@ -94,14 +91,11 @@ export const App: React.FC = () => {
   );
 
   /* ── Zoom controls ── */
-  const handleZoomIn = () =>
-    updateViewport({ zoom: Math.min(zoom * 1.2, 2.5), pan });
+  const handleZoomIn = () => updateViewport({ zoom: Math.min(zoom * 1.2, 2.5), pan });
 
-  const handleZoomOut = () =>
-    updateViewport({ zoom: Math.max(zoom * 0.8, 0.2), pan });
+  const handleZoomOut = () => updateViewport({ zoom: Math.max(zoom * 0.8, 0.2), pan });
 
-  const handleFitView = () =>
-    updateViewport({ zoom: 1, pan: { x: 80, y: 80 } });
+  const handleFitView = () => updateViewport({ zoom: 1, pan: { x: 80, y: 80 } });
 
   return (
     <ErrorBoundary>
@@ -152,11 +146,7 @@ export const App: React.FC = () => {
               <RotateCcw size={13} />
               Reiniciar
             </button>
-            <button
-              type="button"
-              className="n8n-btn n8n-btn--primary"
-              onClick={handleAddRoot}
-            >
+            <button type="button" className="n8n-btn n8n-btn--primary" onClick={handleAddRoot}>
               <Plus size={14} />
               Agregar Nodo
             </button>
@@ -176,10 +166,7 @@ export const App: React.FC = () => {
         >
           {/* Canvas area */}
           <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-            <Canvas
-              onNodeSelect={handleNodeSelect}
-              onNodeMove={handleNodeMove}
-            />
+            <Canvas onNodeSelect={handleNodeSelect} onNodeMove={handleNodeMove} />
 
             {/* Zoom controls – bottom right */}
             <div className="zoom-controls">
@@ -223,11 +210,7 @@ export const App: React.FC = () => {
               >
                 <X size={16} />
               </button>
-              <NodeDetail
-                onEdit={handleEdit}
-                onAddChild={handleAddChild}
-                onDelete={handleDelete}
-              />
+              <NodeDetail onEdit={handleEdit} onAddChild={handleAddChild} onDelete={handleDelete} />
             </aside>
           )}
         </div>
@@ -255,9 +238,7 @@ export const App: React.FC = () => {
             <div className="modal-backdrop" />
             <div className="modal-content animate-slide-up">
               <CreateNodeDialog
-                parentId={
-                  dialog.kind === "addChild" ? dialog.parentId : undefined
-                }
+                parentId={dialog.kind === "addChild" ? dialog.parentId : undefined}
                 onClose={handleClose}
               />
             </div>

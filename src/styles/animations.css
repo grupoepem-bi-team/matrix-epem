@@ -1,0 +1,77 @@
+/* ═══════════════════════════════════════════════ */
+/*  Animations                                   */
+/* ═══════════════════════════════════════════════ */
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in var(--transition-normal) ease-out;
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    animation: slide-up var(--transition-normal) ease-out;
+}
+
+@keyframes scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-scale-in {
+    animation: scale-in var(--transition-normal) ease-out;
+}
+
+@keyframes pulse-accent {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 var(--color-accent-medium);
+    }
+    50% {
+        box-shadow: 0 0 0 6px transparent;
+    }
+}
+
+.animate-pulse-accent {
+    animation: pulse-accent 2s infinite;
+}
+
+@keyframes connection-flow {
+    to {
+        stroke-dashoffset: -14;
+    }
+}
+
+@keyframes panel-slide-in {
+    from {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}

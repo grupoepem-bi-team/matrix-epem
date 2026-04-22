@@ -46,41 +46,34 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const colors = variantColors[variant];
 
   return (
-    <div
-      className="modal-overlay"
-      onClick={(e) => e.target === e.currentTarget && onCancel()}
-    >
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onCancel()}>
       <div className="modal-backdrop" />
       <div className="modal-content animate-slide-up" style={{ maxWidth: 400 }}>
         <div className="n8n-card p-6">
           <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 16 }}>
-            <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              background: `${colors.icon}18`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: `${colors.icon}18`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
               <AlertTriangle size={20} style={{ color: colors.icon }} />
             </div>
             <div style={{ flex: 1 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600, color: "#e8e8f0", marginBottom: 6 }}>
                 {title}
               </h3>
-              <p style={{ fontSize: 13, color: "#a0a0b8", lineHeight: 1.5 }}>
-                {message}
-              </p>
+              <p style={{ fontSize: 13, color: "#a0a0b8", lineHeight: 1.5 }}>{message}</p>
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <button
-              type="button"
-              className="n8n-btn"
-              onClick={onCancel}
-            >
+            <button type="button" className="n8n-btn" onClick={onCancel}>
               {cancelLabel}
             </button>
             <button

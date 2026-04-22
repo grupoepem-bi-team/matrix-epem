@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useTreeStore } from '../../store/useTreeStore';
-import type { NodeType } from '../../types';
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useTreeStore } from "@/store/useTreeStore";
+import type { NodeType } from "@/types";
 
 /* ────────────────────────────────────────────── */
 /*  Props                                        */
@@ -35,9 +35,9 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
   const expandNode = useTreeStore((s) => s.expandNode);
 
   /* ── Form state ── */
-  const [name, setName] = useState('');
-  const [nodeType, setNodeType] = useState<NodeType>('folder');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState("");
+  const [nodeType, setNodeType] = useState<NodeType>("folder");
+  const [description, setDescription] = useState("");
   const [metadataEntries, setMetadataEntries] = useState<MetadataEntry[]>([]);
   const [nameError, setNameError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -52,7 +52,7 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
   /* ── Metadata helpers ── */
   const addMetadataEntry = useCallback(() => {
     metadataIdCounter += 1;
-    setMetadataEntries((prev) => [...prev, { id: metadataIdCounter, key: '', value: '' }]);
+    setMetadataEntries((prev) => [...prev, { id: metadataIdCounter, key: "", value: "" }]);
   }, []);
 
   const removeMetadataEntry = useCallback((entryId: number) => {
@@ -60,9 +60,7 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
   }, []);
 
   const updateMetadataKey = useCallback((entryId: number, newKey: string) => {
-    setMetadataEntries((prev) =>
-      prev.map((e) => (e.id === entryId ? { ...e, key: newKey } : e)),
-    );
+    setMetadataEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, key: newKey } : e)));
   }, []);
 
   const updateMetadataValue = useCallback((entryId: number, newValue: string) => {
@@ -114,18 +112,29 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
 
       onClose();
     },
-    [validate, name, nodeType, description, buildMetadata, parentId, createChildNode, createRootNode, expandNode, onClose],
+    [
+      validate,
+      name,
+      nodeType,
+      description,
+      buildMetadata,
+      parentId,
+      createChildNode,
+      createRootNode,
+      expandNode,
+      onClose,
+    ],
   );
 
   /* ── Escape key handler ── */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   /* ── Render ── */
@@ -135,7 +144,7 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-n8n-text">
-            {parentId ? 'Nuevo nodo hijo' : 'Nuevo nodo raíz'}
+            {parentId ? "Nuevo nodo hijo" : "Nuevo nodo raíz"}
           </h3>
           <button
             type="button"
@@ -143,7 +152,15 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
             onClick={onClose}
             aria-label="Cerrar"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
               <line x1="4" y1="4" x2="12" y2="12" />
               <line x1="12" y1="4" x2="4" y2="12" />
             </svg>
@@ -155,14 +172,17 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
         <form onSubmit={handleSubmit} noValidate>
           {/* ── Name ── */}
           <div className="mb-4">
-            <label htmlFor="create-node-name" className="block text-sm font-medium text-n8n-text-secondary mb-1">
+            <label
+              htmlFor="create-node-name"
+              className="block text-sm font-medium text-n8n-text-secondary mb-1"
+            >
               Nombre <span className="text-n8n-danger">*</span>
             </label>
             <input
               ref={nameInputRef}
               id="create-node-name"
               type="text"
-              className={`n8n-input ${nameError && submitted ? 'border-n8n-danger' : ''}`}
+              className={`n8n-input ${nameError && submitted ? "border-n8n-danger" : ""}`}
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
@@ -178,17 +198,15 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
 
           {/* ── Type (radio) ── */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-n8n-text-secondary mb-2">
-              Tipo
-            </label>
+            <label className="block text-sm font-medium text-n8n-text-secondary mb-2">Tipo</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   name="node-type"
                   value="folder"
-                  checked={nodeType === 'folder'}
-                  onChange={() => setNodeType('folder')}
+                  checked={nodeType === "folder"}
+                  onChange={() => setNodeType("folder")}
                   className="accent-n8n-accent"
                 />
                 <span className="n8n-badge n8n-badge--folder">Carpeta</span>
@@ -198,8 +216,8 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
                   type="radio"
                   name="node-type"
                   value="document"
-                  checked={nodeType === 'document'}
-                  onChange={() => setNodeType('document')}
+                  checked={nodeType === "document"}
+                  onChange={() => setNodeType("document")}
                   className="accent-n8n-accent"
                 />
                 <span className="n8n-badge n8n-badge--document">Documento</span>
@@ -209,7 +227,10 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
 
           {/* ── Description ── */}
           <div className="mb-4">
-            <label htmlFor="create-node-desc" className="block text-sm font-medium text-n8n-text-secondary mb-1">
+            <label
+              htmlFor="create-node-desc"
+              className="block text-sm font-medium text-n8n-text-secondary mb-1"
+            >
               Descripción
             </label>
             <textarea
@@ -219,22 +240,28 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descripción opcional del nodo"
-              style={{ resize: 'vertical' }}
+              style={{ resize: "vertical" }}
             />
           </div>
 
           {/* ── Metadata ── */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-n8n-text-secondary">
-                Metadatos
-              </label>
+              <label className="block text-sm font-medium text-n8n-text-secondary">Metadatos</label>
               <button
                 type="button"
                 className="n8n-btn n8n-btn--ghost n8n-btn--sm"
                 onClick={addMetadataEntry}
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
                   <line x1="7" y1="1" x2="7" y2="13" />
                   <line x1="1" y1="7" x2="13" y2="7" />
                 </svg>
@@ -276,7 +303,15 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
                     onClick={() => removeMetadataEntry(entry.id)}
                     aria-label="Eliminar metadato"
                   >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
                       <line x1="3" y1="3" x2="11" y2="11" />
                       <line x1="11" y1="3" x2="3" y2="11" />
                     </svg>
@@ -290,18 +325,19 @@ export function CreateNodeDialog({ parentId, onClose }: CreateNodeDialogProps) {
 
           {/* ── Action buttons ── */}
           <div className="flex items-center justify-end gap-2 mt-4">
-            <button
-              type="button"
-              className="n8n-btn"
-              onClick={onClose}
-            >
+            <button type="button" className="n8n-btn" onClick={onClose}>
               Cancelar
             </button>
-            <button
-              type="submit"
-              className="n8n-btn n8n-btn--primary"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <button type="submit" className="n8n-btn n8n-btn--primary">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
                 <line x1="7" y1="1" x2="7" y2="13" />
                 <line x1="1" y1="7" x2="13" y2="7" />
               </svg>

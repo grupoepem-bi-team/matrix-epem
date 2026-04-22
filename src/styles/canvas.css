@@ -1,0 +1,301 @@
+/* ═══════════════════════════════════════════════════════════════════ */
+/*  CANVAS (n8n-style infinite canvas)                               */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.canvas-container {
+    background: #12121a;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ── Canvas dot grid — fixed pattern that transforms with pan/zoom ── */
+/* JavaScript sets backgroundPosition and backgroundSize dynamically   */
+.canvas-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 0.06) 1px,
+        transparent 1px
+    );
+    background-size: 24px 24px;
+    z-index: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/*  WORKFLOW NODE — n8n style (horizontal: port | icon | body | port)  */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.wf-node {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    width: 220px;
+    height: 80px;
+    background: #2c2c3f;
+    border: 2px solid #3d3d58;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+    cursor: grab;
+    user-select: none;
+    overflow: visible;
+    transition:
+        border-color 150ms ease,
+        box-shadow 150ms ease;
+}
+
+.wf-node:hover {
+    border-color: #5a5a7a;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.7);
+}
+
+.wf-node--selected {
+    border-color: #ff6d5a;
+    box-shadow:
+        0 0 0 3px rgba(255, 109, 90, 0.22),
+        0 8px 28px rgba(0, 0, 0, 0.7);
+}
+
+.wf-node--dragging {
+    cursor: grabbing;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+}
+
+/* ── Left coloured stripe ── */
+.wf-node__stripe {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 10px 0 0 10px;
+    pointer-events: none;
+}
+
+.wf-node--folder .wf-node__stripe {
+    background: #ffb74d;
+}
+
+.wf-node--document .wf-node__stripe {
+    background: #64b5f6;
+}
+
+/* ── Icon container ── */
+.wf-node__icon {
+    width: 52px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px 0 0 10px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.wf-node--folder .wf-node__icon {
+    background: rgba(255, 183, 77, 0.18);
+    color: #ffb74d;
+}
+
+.wf-node--document .wf-node__icon {
+    background: rgba(100, 181, 246, 0.18);
+    color: #64b5f6;
+}
+
+/* ── Text body ── */
+.wf-node__body {
+    flex: 1;
+    padding: 0 10px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wf-node__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e8e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wf-node__subtitle {
+    font-size: 11px;
+    color: #7878a0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wf-node--folder .wf-node__subtitle {
+    color: rgba(255, 183, 77, 0.7);
+}
+
+.wf-node--document .wf-node__subtitle {
+    color: rgba(100, 181, 246, 0.7);
+}
+
+/* ── Status checkmark (top-right corner) ── */
+.wf-node__status {
+    position: absolute;
+    top: 7px;
+    right: 18px;
+    color: #4caf50;
+    opacity: 0.75;
+    pointer-events: none;
+}
+
+/* ── Connection ports ── */
+.wf-port {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #4a4a68;
+    border: 2px solid #2c2c3f;
+    top: 50%;
+    transform: translateY(-50%);
+    transition:
+        background 0.15s,
+        transform 0.15s,
+        box-shadow 0.15s;
+    z-index: 2;
+    cursor: crosshair;
+}
+
+.wf-port--input {
+    left: -8px;
+}
+
+.wf-port--output {
+    right: -8px;
+}
+
+/* Folder ports: amber tint by default */
+.wf-node--folder .wf-port {
+    background: rgba(255, 183, 77, 0.45);
+    border-color: rgba(255, 183, 77, 0.6);
+}
+
+/* Document ports: blue tint by default */
+.wf-node--document .wf-port {
+    background: rgba(100, 181, 246, 0.45);
+    border-color: rgba(100, 181, 246, 0.6);
+}
+
+/* Hover/selected: accent colour overrides type tint */
+.wf-node:hover .wf-port,
+.wf-node--selected .wf-port {
+    background: #ff6d5a;
+    border-color: #ff6d5a;
+    box-shadow: 0 0 0 3px rgba(255, 109, 90, 0.25);
+    transform: translateY(-50%) scale(1.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/*  CONNECTION LINES (SVG bezier curves)                             */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.connection-line path {
+    fill: none;
+    stroke: #555570;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.connection-line--selected path {
+    stroke: #ff6d5a;
+    stroke-width: 2.5;
+}
+
+/* ── Animated dashed overlay for "running" state ── */
+.connection-line__animated {
+    stroke-dasharray: 7 7;
+    animation: connection-flow 0.8s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/*  MINIMAP                                                          */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.minimap {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 160px;
+    height: 100px;
+    background: #1a1a28;
+    border: 1px solid #2a2a40;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    z-index: 100;
+    cursor: pointer;
+}
+
+.minimap__nodes {
+    position: absolute;
+    inset: 0;
+}
+
+.minimap__node {
+    position: absolute;
+    border-radius: 2px;
+    background: #3d3d58;
+}
+
+.minimap__node--folder {
+    background: rgba(255, 183, 77, 0.5);
+}
+
+.minimap__node--document {
+    background: rgba(100, 181, 246, 0.5);
+}
+
+.minimap__viewport {
+    position: absolute;
+    border: 1.5px solid #ff6d5a;
+    background: rgba(255, 109, 90, 0.06);
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/*  ZOOM CONTROLS                                                    */
+/* ═══════════════════════════════════════════════════════════════════ */
+
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 100;
+    background: #1e1e2f;
+    border: 1px solid #2a2a40;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.zoom-level {
+    font-size: 12px;
+    font-weight: 500;
+    color: #8080a0;
+    padding: 0 8px;
+    min-width: 44px;
+    text-align: center;
+}
+
+.zoom-divider {
+    width: 1px;
+    height: 18px;
+    background: #2a2a40;
+    margin: 0 2px;
+}

@@ -24,17 +24,12 @@ export const VERTICAL_GAP = 30;
  * falls back to a v4 UUID implementation for HTTP contexts.
  */
 export const generateId = (): string => {
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
   // Fallback for non-secure contexts
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r =
-      (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >>
-      (c === "x" ? 0 : 4);
+    const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> (c === "x" ? 0 : 4);
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
@@ -115,10 +110,7 @@ export const autoLayout = (nodes: TreeNode[], x0 = 80, y0 = 40): TreeNode[] => {
  *   below the bottom of any existing siblings.
  * - If no parentId, the new root node is placed below the last root node.
  */
-export const calculateNewNodePosition = (
-  nodes: TreeNode[],
-  parentId?: string,
-): Position => {
+export const calculateNewNodePosition = (nodes: TreeNode[], parentId?: string): Position => {
   // If parentId is provided, find the parent and position the new child
   if (parentId) {
     const parent = findNodeById(nodes, parentId);
@@ -200,10 +192,7 @@ export interface Edge {
  * Flatten every node in the tree (depth-first).
  * Returns a flat array of all TreeNode objects.
  */
-export const flattenAll = (
-  nodeList: TreeNode[],
-  out: TreeNode[] = [],
-): TreeNode[] => {
+export const flattenAll = (nodeList: TreeNode[], out: TreeNode[] = []): TreeNode[] => {
   for (const n of nodeList) {
     out.push(n);
     if (n.children.length > 0) flattenAll(n.children, out);
@@ -215,10 +204,7 @@ export const flattenAll = (
  * Collect every parent→child edge in the tree.
  * Returns an array of Edge objects derived from the hierarchy.
  */
-export const collectEdges = (
-  nodeList: TreeNode[],
-  out: Edge[] = [],
-): Edge[] => {
+export const collectEdges = (nodeList: TreeNode[], out: Edge[] = []): Edge[] => {
   for (const n of nodeList) {
     for (const c of n.children) {
       out.push({ id: `${n.id}→${c.id}`, sourceId: n.id, targetId: c.id });
@@ -235,10 +221,7 @@ export const collectEdges = (
 /**
  * Find a node by its ID in the tree
  */
-export const findNodeById = (
-  nodes: TreeNode[],
-  id: string,
-): TreeNode | null => {
+export const findNodeById = (nodes: TreeNode[], id: string): TreeNode | null => {
   for (const node of nodes) {
     if (node.id === id) return node;
     if (node.children.length > 0) {
@@ -252,10 +235,7 @@ export const findNodeById = (
 /**
  * Find the parent of a node by the child's ID
  */
-export const findParentNode = (
-  nodes: TreeNode[],
-  childId: string,
-): TreeNode | null => {
+export const findParentNode = (nodes: TreeNode[], childId: string): TreeNode | null => {
   for (const node of nodes) {
     if (node.children.some((child) => child.id === childId)) return node;
     if (node.children.length > 0) {
@@ -276,8 +256,7 @@ export const getNodePath = (nodes: TreeNode[], id: string): TreeNode[] => {
     for (const node of nodeList) {
       path.push(node);
       if (node.id === target) return true;
-      if (node.children.length > 0 && search(node.children, target))
-        return true;
+      if (node.children.length > 0 && search(node.children, target)) return true;
       path.pop();
     }
     return false;
@@ -316,10 +295,7 @@ export const addNodeToParent = (
 /**
  * Add a new node at the root level
  */
-export const addRootNode = (
-  nodes: TreeNode[],
-  newNode: TreeNode,
-): TreeNode[] => {
+export const addRootNode = (nodes: TreeNode[], newNode: TreeNode): TreeNode[] => {
   return [...nodes, newNode];
 };
 
@@ -519,29 +495,13 @@ export const createDefaultTree = (): TreeNode[] => {
   );
 
   // ── Level 1: Category folders ──
-  const reportesFolder = createNode(
-    "Reportes",
-    "folder",
-    "Reportes periódicos del departamento",
-  );
-  reportesFolder.children = [
-    reporteMensual,
-    dashboardEjecutivo,
-    reporteTrimestral,
-  ];
+  const reportesFolder = createNode("Reportes", "folder", "Reportes periódicos del departamento");
+  reportesFolder.children = [reporteMensual, dashboardEjecutivo, reporteTrimestral];
 
-  const etlFolder = createNode(
-    "Procesos ETL",
-    "folder",
-    "Documentación de procesos ETL",
-  );
+  const etlFolder = createNode("Procesos ETL", "folder", "Documentación de procesos ETL");
   etlFolder.children = [etlVentas, etlRRHH];
 
-  const modelosFolder = createNode(
-    "Modelos de Datos",
-    "folder",
-    "Modelos y diagramas de datos",
-  );
+  const modelosFolder = createNode("Modelos de Datos", "folder", "Modelos y diagramas de datos");
   modelosFolder.children = [modeloStar];
 
   const documentacionFolder = createNode(
@@ -557,12 +517,7 @@ export const createDefaultTree = (): TreeNode[] => {
     "folder",
     "Documentos del Departamento de Business Intelligence",
   );
-  rootNode.children = [
-    reportesFolder,
-    etlFolder,
-    modelosFolder,
-    documentacionFolder,
-  ];
+  rootNode.children = [reportesFolder, etlFolder, modelosFolder, documentacionFolder];
 
   // Apply horizontal L→R auto-layout to assign positions
   return autoLayout([rootNode]);

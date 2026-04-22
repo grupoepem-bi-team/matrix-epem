@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useTreeStore } from '../../store/useTreeStore';
-import { findNodeById } from '../../utils/tree';
-import type { NodeType } from '../../types';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useTreeStore } from "@/store/useTreeStore";
+import { findNodeById } from "@/utils/tree";
+import type { NodeType } from "@/types";
 
 /* ────────────────────────────────────────────── */
 /*  Types                                        */
@@ -25,23 +25,23 @@ interface MetadataEntry {
 const generateEntryId = (): string => crypto.randomUUID();
 
 const NODE_TYPE_LABELS: Record<NodeType, string> = {
-  folder: 'Carpeta',
-  document: 'Documento',
+  folder: "Carpeta",
+  document: "Documento",
 };
 
 const NODE_TYPE_BADGE: Record<NodeType, string> = {
-  folder: 'n8n-badge n8n-badge--folder',
-  document: 'n8n-badge n8n-badge--document',
+  folder: "n8n-badge n8n-badge--folder",
+  document: "n8n-badge n8n-badge--document",
 };
 
 const formatDateEsAR = (isoString: string): string => {
   const date = new Date(isoString);
-  return date.toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return date.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 };
 
@@ -56,8 +56,8 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
   const node = findNodeById(nodes, nodeId);
 
   /* ── Form state ── */
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [metadataEntries, setMetadataEntries] = useState<MetadataEntry[]>([]);
   const [nameError, setNameError] = useState(false);
 
@@ -67,13 +67,24 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
   useEffect(() => {
     if (!node) return;
 
-    setName(node.name);
-    setDescription(node.description);
+    // Capture node data to avoid stale references in deferred update
+    const nodeName = node.name;
+    const nodeDescription = node.description;
+    const nodeMetadata = node.metadata;
 
-    const entries: MetadataEntry[] = Object.entries(node.metadata).map(
-      ([k, v]) => ({ id: generateEntryId(), key: k, value: v }),
-    );
-    setMetadataEntries(entries);
+    // Defer setState to avoid synchronous state update in effect
+    // which can trigger cascading renders
+    queueMicrotask(() => {
+      setName(nodeName);
+      setDescription(nodeDescription);
+
+      const entries: MetadataEntry[] = Object.entries(nodeMetadata).map(([k, v]) => ({
+        id: generateEntryId(),
+        key: k,
+        value: v,
+      }));
+      setMetadataEntries(entries);
+    });
   }, [node]);
 
   /* ── Auto-focus name field on mount ── */
@@ -88,10 +99,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
 
   /* ── Metadata helpers ── */
   const addMetadataEntry = useCallback(() => {
-    setMetadataEntries((prev) => [
-      ...prev,
-      { id: generateEntryId(), key: '', value: '' },
-    ]);
+    setMetadataEntries((prev) => [...prev, { id: generateEntryId(), key: "", value: "" }]);
   }, []);
 
   const removeMetadataEntry = useCallback((entryId: string) => {
@@ -99,7 +107,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
   }, []);
 
   const updateMetadataEntry = useCallback(
-    (entryId: string, field: 'key' | 'value', val: string) => {
+    (entryId: string, field: "key" | "value", val: string) => {
       setMetadataEntries((prev) =>
         prev.map((e) => (e.id === entryId ? { ...e, [field]: val } : e)),
       );
@@ -149,7 +157,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
 
   /* ── Handle Escape key ── */
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       handleCancel();
     }
   };
@@ -181,9 +189,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
       <div className="n8n-card p-6">
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-[var(--color-n8n-text)]">
-            Editar nodo
-          </h3>
+          <h3 className="text-base font-semibold text-[var(--color-n8n-text)]">Editar nodo</h3>
           <button
             type="button"
             className="n8n-btn n8n-btn--ghost n8n-btn--icon n8n-btn--sm"
@@ -202,9 +208,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
             <label className="text-xs font-medium text-[var(--color-n8n-text-secondary)]">
               Tipo
             </label>
-            <span className={NODE_TYPE_BADGE[nodeType]}>
-              {NODE_TYPE_LABELS[nodeType]}
-            </span>
+            <span className={NODE_TYPE_BADGE[nodeType]}>{NODE_TYPE_LABELS[nodeType]}</span>
           </div>
 
           {/* ── Name ── */}
@@ -219,7 +223,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
               ref={nameRef}
               id="edit-node-name"
               type="text"
-              className={`n8n-input ${nameError ? 'border-[var(--color-n8n-danger)]' : ''}`}
+              className={`n8n-input ${nameError ? "border-[var(--color-n8n-danger)]" : ""}`}
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
@@ -281,9 +285,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
                     type="text"
                     className="n8n-input flex-1"
                     value={entry.key}
-                    onChange={(e) =>
-                      updateMetadataEntry(entry.id, 'key', e.target.value)
-                    }
+                    onChange={(e) => updateMetadataEntry(entry.id, "key", e.target.value)}
                     placeholder="Clave"
                     autoComplete="off"
                   />
@@ -291,9 +293,7 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
                     type="text"
                     className="n8n-input flex-1"
                     value={entry.value}
-                    onChange={(e) =>
-                      updateMetadataEntry(entry.id, 'value', e.target.value)
-                    }
+                    onChange={(e) => updateMetadataEntry(entry.id, "value", e.target.value)}
                     placeholder="Valor"
                     autoComplete="off"
                   />
@@ -319,17 +319,10 @@ export function EditNodeDialog({ nodeId, onClose }: EditNodeDialogProps) {
 
           {/* ── Actions ── */}
           <div className="flex items-center justify-end gap-2 mt-2">
-            <button
-              type="button"
-              className="n8n-btn n8n-btn--sm"
-              onClick={handleCancel}
-            >
+            <button type="button" className="n8n-btn n8n-btn--sm" onClick={handleCancel}>
               Cancelar
             </button>
-            <button
-              type="submit"
-              className="n8n-btn n8n-btn--primary n8n-btn--sm"
-            >
+            <button type="submit" className="n8n-btn n8n-btn--primary n8n-btn--sm">
               Guardar
             </button>
           </div>

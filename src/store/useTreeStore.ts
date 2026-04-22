@@ -1,12 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type {
-  TreeNode,
-  CreateNodeData,
-  UpdateNodeData,
-  Position,
-  Viewport,
-} from "../types";
+import type { TreeNode, CreateNodeData, UpdateNodeData, Position, Viewport } from "@/types";
 import {
   addNodeToParent,
   addRootNode,
@@ -18,7 +12,7 @@ import {
   getNodePath,
   autoLayout,
   calculateNewNodePosition,
-} from "../utils/tree";
+} from "@/utils/tree";
 
 /* ────────────────────────────────────────────── */
 /*  State shape                                  */
@@ -150,9 +144,7 @@ export const useTreeStore = create<TreeState & TreeActions>()(
           const state = get();
           const path = getNodePath(state.nodes, id);
           const ancestorIds = path.slice(0, -1).map((n) => n.id);
-          const newExpanded = Array.from(
-            new Set([...state.expandedNodeIds, ...ancestorIds]),
-          );
+          const newExpanded = Array.from(new Set([...state.expandedNodeIds, ...ancestorIds]));
           set({ expandedNodeIds: newExpanded });
         }
       },
@@ -184,9 +176,7 @@ export const useTreeStore = create<TreeState & TreeActions>()(
         const state = get();
         const path = getNodePath(state.nodes, id);
         const ancestorIds = path.slice(0, -1).map((n) => n.id);
-        const newExpanded = Array.from(
-          new Set([...state.expandedNodeIds, ...ancestorIds]),
-        );
+        const newExpanded = Array.from(new Set([...state.expandedNodeIds, ...ancestorIds]));
         set({ expandedNodeIds: newExpanded });
       },
 
@@ -201,12 +191,7 @@ export const useTreeStore = create<TreeState & TreeActions>()(
 
       /* ── CRUD ── */
       createChildNode: (parentId, data) => {
-        const newNode = createNode(
-          data.name,
-          data.type,
-          data.description,
-          data.metadata,
-        );
+        const newNode = createNode(data.name, data.type, data.description, data.metadata);
         const { nodes, expandedNodeIds } = get();
 
         // Calculate position for the new node based on its parent and siblings
@@ -225,12 +210,7 @@ export const useTreeStore = create<TreeState & TreeActions>()(
       },
 
       createRootNode: (data) => {
-        const newNode = createNode(
-          data.name,
-          data.type,
-          data.description,
-          data.metadata,
-        );
+        const newNode = createNode(data.name, data.type, data.description, data.metadata);
         const { nodes } = get();
 
         // Calculate position for the new root node
@@ -248,8 +228,7 @@ export const useTreeStore = create<TreeState & TreeActions>()(
         const { nodes } = get();
         const updates: Partial<TreeNode> = {};
         if (data.name !== undefined) updates.name = data.name;
-        if (data.description !== undefined)
-          updates.description = data.description;
+        if (data.description !== undefined) updates.description = data.description;
         if (data.metadata !== undefined) updates.metadata = data.metadata;
         const updatedNodes = updateNodeById(nodes, id, updates);
         set({
@@ -328,13 +307,15 @@ export const useTreeStore = create<TreeState & TreeActions>()(
         expandedNodeIds: state.expandedNodeIds,
       }),
       // Migration: if we detect old data format, reset to defaults
-      migrate: (persistedState: any, version: number) => {
+      migrate: (persistedState: unknown, version: number) => {
         if (version === 0) {
           // Version 0 had the old layout with autoLayout on every CRUD
           // Reset to fresh data with new layout
           const defaultNodes = createDefaultTree();
           return {
-            ...persistedState,
+            ...(typeof persistedState === "object" && persistedState !== null
+              ? persistedState
+              : {}),
             nodes: defaultNodes,
             expandedNodeIds: collectFolderIds(defaultNodes),
           };
