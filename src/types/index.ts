@@ -40,22 +40,6 @@ export interface TreeNode {
   updatedAt: string;
   /** Posición en el canvas (para UI tipo n8n, layout horizontal L→R) */
   position?: Position;
-  /** Dimensiones del nodo en píxeles (calculado automáticamente) */
-  dimensions?: { width: number; height: number };
-  /** Estado expandido/colapsado (para carpetas) */
-  expanded?: boolean;
-}
-
-/**
- * Conexión visual derivada de la jerarquía padre → hijo.
- * Se genera automáticamente a partir de TreeNode.children.
- * No se crea ni se elimina independientemente.
- */
-export interface NodeConnection {
-  /** ID del nodo padre (origen - lado izquierdo) */
-  source: string;
-  /** ID del nodo hijo (destino - lado derecho) */
-  target: string;
 }
 
 /** Datos necesarios para crear un nuevo nodo */
@@ -74,7 +58,6 @@ export interface UpdateNodeData {
   description?: string;
   metadata?: Record<string, string>;
   position?: Position;
-  expanded?: boolean;
 }
 
 /** Estado del viewport del canvas */

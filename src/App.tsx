@@ -91,9 +91,9 @@ export const App: React.FC = () => {
   );
 
   /* ── Zoom controls ── */
-  const handleZoomIn = () => updateViewport({ zoom: Math.min(zoom * 1.2, 2.5), pan });
+  const handleZoomIn = () => updateViewport({ zoom: Math.min(zoom * 1.2, 3), pan });
 
-  const handleZoomOut = () => updateViewport({ zoom: Math.max(zoom * 0.8, 0.2), pan });
+  const handleZoomOut = () => updateViewport({ zoom: Math.max(zoom * 0.8, 0.15), pan });
 
   const handleFitView = () => updateViewport({ zoom: 1, pan: { x: 80, y: 80 } });
 

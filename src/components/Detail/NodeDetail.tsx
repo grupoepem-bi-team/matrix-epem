@@ -161,11 +161,7 @@ export const NodeDetail: React.FC<NodeDetailProps> = ({ onEdit, onAddChild, onDe
         <button
           type="button"
           className="n8n-btn n8n-btn--danger"
-          onClick={() => {
-            if (confirm(`Eliminar "${selectedNode.name}"?`)) {
-              onDelete(selectedNode.id);
-            }
-          }}
+          onClick={() => onDelete(selectedNode.id)}
         >
           <Trash2 size={14} />
           Eliminar
