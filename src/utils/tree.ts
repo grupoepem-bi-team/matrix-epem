@@ -1,4 +1,4 @@
-import type { TreeNode, NodeType } from "../types";
+import type { TreeNode, NodeType, Position } from "../types";
 
 /* ────────────────────────────────────────────── */
 /*  Layout constants (horizontal L→R flow)      */
@@ -13,6 +13,32 @@ export const NODE_HEIGHT = 80;
 export const HORIZONTAL_GAP = 80;
 /** Vertical gap between sibling nodes */
 export const VERTICAL_GAP = 30;
+
+/* ────────────────────────────────────────────── */
+/*  ID generation                               */
+/* ────────────────────────────────────────────── */
+
+/**
+ * Generate a unique ID for new nodes.
+ * Uses crypto.randomUUID() when available (secure contexts),
+ * falls back to a v4 UUID implementation for HTTP contexts.
+ */
+export const generateId = (): string => {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  // Fallback for non-secure contexts
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r =
+      (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >>
+      (c === "x" ? 0 : 4);
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
 /* ────────────────────────────────────────────── */
 /*  Auto-layout (horizontal left → right)       */
@@ -41,19 +67,15 @@ export const calcSubtreeHeight = (node: TreeNode): number => {
 };
 
 /**
- * Recursively assigns (x, y) positions to every node so the whole tree
- * is laid out **horizontally left-to-right** (like n8n's workflow editor).
+ * Recalculates ALL node positions in a horizontal L→R layout.
  *
- * - Root node starts on the LEFT
- * - Children flow to the RIGHT
- * - Siblings are stacked VERTICALLY with VERTICAL_GAP between them
- * - Depth levels are separated by (NODE_WIDTH + HORIZONTAL_GAP)
- * - Each parent is centered vertically within its subtree space
+ * ⚠️ Use sparingly! This DESTROYS any manually-set positions.
+ * Only call this for:
+ * - Initial layout (in createDefaultTree)
+ * - Reset to default (in resetToDefault)
+ * - Explicit "Reorganize" user action
  *
- * @param nodes  - list of sibling nodes at the same depth level
- * @param x0     - left edge X coordinate where this group starts
- * @param y0     - top edge Y coordinate where this group starts
- * @returns A new array of TreeNode objects with `position` set
+ * Do NOT call this after every create/delete operation.
  */
 export const autoLayout = (nodes: TreeNode[], x0 = 80, y0 = 40): TreeNode[] => {
   let yCursor = y0;
@@ -82,15 +104,133 @@ export const autoLayout = (nodes: TreeNode[], x0 = 80, y0 = 40): TreeNode[] => {
 };
 
 /* ────────────────────────────────────────────── */
-/*  Tree utility functions                       */
+/*  New-node position calculation                */
 /* ────────────────────────────────────────────── */
 
 /**
- * Generate a unique ID for new nodes
+ * Calculates where a NEW node should be placed, WITHOUT recalculating
+ * all existing positions. This preserves manually-dragged positions.
+ *
+ * - If parentId is given, the new child is placed to the right of the parent,
+ *   below the bottom of any existing siblings.
+ * - If no parentId, the new root node is placed below the last root node.
  */
-export const generateId = (): string => {
-  return crypto.randomUUID();
+export const calculateNewNodePosition = (
+  nodes: TreeNode[],
+  parentId?: string,
+): Position => {
+  // If parentId is provided, find the parent and position the new child
+  if (parentId) {
+    const parent = findNodeById(nodes, parentId);
+    if (parent) {
+      if (parent.children.length === 0) {
+        // First child: place to the right of parent, vertically centered
+        return {
+          x: parent.position!.x + NODE_WIDTH + HORIZONTAL_GAP,
+          y: parent.position!.y,
+        };
+      } else {
+        // Place below the last child
+        // Check if there are siblings below — find the max Y of all siblings
+        const maxY = parent.children.reduce((max, child) => {
+          if (child.position) {
+            const subtreeH = calcSubtreeHeight(child);
+            return Math.max(max, child.position.y + subtreeH);
+          }
+          return max;
+        }, -Infinity);
+        return {
+          x: parent.position!.x + NODE_WIDTH + HORIZONTAL_GAP,
+          y: maxY !== -Infinity ? maxY + VERTICAL_GAP : parent.position!.y,
+        };
+      }
+    }
+  }
+
+  // Root node: place below the last root node
+  if (nodes.length === 0) {
+    return { x: 80, y: 40 };
+  }
+  const maxY = nodes.reduce((max, node) => {
+    if (node.position) {
+      const subtreeH = calcSubtreeHeight(node);
+      return Math.max(max, node.position.y + subtreeH);
+    }
+    return max;
+  }, -Infinity);
+  return {
+    x: 80,
+    y: maxY !== -Infinity ? maxY + VERTICAL_GAP : 40,
+  };
 };
+
+/* ────────────────────────────────────────────── */
+/*  Node map for O(1) lookups                    */
+/* ────────────────────────────────────────────── */
+
+/**
+ * Builds a flat Map of id → TreeNode for O(1) lookups.
+ * Useful when you need to find nodes by ID repeatedly without
+ * walking the tree each time.
+ */
+export const buildNodeMap = (nodes: TreeNode[]): Map<string, TreeNode> => {
+  const map = new Map<string, TreeNode>();
+  const walk = (nodeList: TreeNode[]) => {
+    for (const node of nodeList) {
+      map.set(node.id, node);
+      if (node.children.length > 0) walk(node.children);
+    }
+  };
+  walk(nodes);
+  return map;
+};
+
+/* ────────────────────────────────────────────── */
+/*  Flatten & edge collection                   */
+/* ────────────────────────────────────────────── */
+
+/** Represents a visual edge (connection) from parent to child. */
+export interface Edge {
+  id: string;
+  sourceId: string;
+  targetId: string;
+}
+
+/**
+ * Flatten every node in the tree (depth-first).
+ * Returns a flat array of all TreeNode objects.
+ */
+export const flattenAll = (
+  nodeList: TreeNode[],
+  out: TreeNode[] = [],
+): TreeNode[] => {
+  for (const n of nodeList) {
+    out.push(n);
+    if (n.children.length > 0) flattenAll(n.children, out);
+  }
+  return out;
+};
+
+/**
+ * Collect every parent→child edge in the tree.
+ * Returns an array of Edge objects derived from the hierarchy.
+ */
+export const collectEdges = (
+  nodeList: TreeNode[],
+  out: Edge[] = [],
+): Edge[] => {
+  for (const n of nodeList) {
+    for (const c of n.children) {
+      out.push({ id: `${n.id}→${c.id}`, sourceId: n.id, targetId: c.id });
+      collectEdges([c], out);
+    }
+  }
+  return out;
+};
+
+/* ────────────────────────────────────────────── */
+/*  Tree utility functions                       */
+/* ────────────────────────────────────────────── */
 
 /**
  * Find a node by its ID in the tree

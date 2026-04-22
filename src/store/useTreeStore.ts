@@ -17,6 +17,7 @@ import {
   createNode,
   getNodePath,
   autoLayout,
+  calculateNewNodePosition,
 } from "../utils/tree";
 
 /* ────────────────────────────────────────────── */
@@ -79,6 +80,8 @@ interface TreeActions {
   clearSearch: () => void;
   /** Reset the entire tree to the default sample data */
   resetToDefault: () => void;
+  /** Reorganize all node positions (destructive — resets manual positions) */
+  reorganizeLayout: () => void;
   /** Update viewport (zoom & pan) */
   updateViewport: (viewport: Partial<Viewport>) => void;
   /** Update node position (after drag in canvas) */
@@ -110,6 +113,18 @@ const collectFolderIds = (nodes: TreeNode[]): string[] => {
   };
   walk(nodes);
   return ids;
+};
+
+/** Check if any node in the tree lacks a position */
+const checkIfNodesNeedLayout = (nodes: TreeNode[]): boolean => {
+  const walk = (list: TreeNode[]): boolean => {
+    for (const node of list) {
+      if (!node.position) return true;
+      if (node.children.length > 0 && walk(node.children)) return true;
+    }
+    return false;
+  };
+  return walk(nodes);
 };
 
 /* ────────────────────────────────────────────── */
@@ -193,18 +208,19 @@ export const useTreeStore = create<TreeState & TreeActions>()(
           data.metadata,
         );
         const { nodes, expandedNodeIds } = get();
+
+        // Calculate position for the new node based on its parent and siblings
+        newNode.position = calculateNewNodePosition(nodes, parentId);
+
         const withChild = addNodeToParent(nodes, parentId, newNode);
-        // Re-layout the whole tree so every node gets a correct position
-        // (horizontal L→R flow with NODE_WIDTH, NODE_HEIGHT, HORIZONTAL_GAP, VERTICAL_GAP)
-        const updatedNodes = autoLayout(withChild);
         const newExpanded = expandedNodeIds.includes(parentId)
           ? expandedNodeIds
           : [...expandedNodeIds, parentId];
         set({
-          nodes: updatedNodes,
+          nodes: withChild,
           expandedNodeIds: newExpanded,
           selectedNodeId: newNode.id,
-          searchResults: computeSearchResults(updatedNodes, get().searchQuery),
+          searchResults: computeSearchResults(withChild, get().searchQuery),
         });
       },
 
@@ -216,12 +232,15 @@ export const useTreeStore = create<TreeState & TreeActions>()(
           data.metadata,
         );
         const { nodes } = get();
+
+        // Calculate position for the new root node
+        newNode.position = calculateNewNodePosition(nodes);
+
         const withRoot = addRootNode(nodes, newNode);
-        const updatedNodes = autoLayout(withRoot);
         set({
-          nodes: updatedNodes,
+          nodes: withRoot,
           selectedNodeId: newNode.id,
-          searchResults: computeSearchResults(updatedNodes, get().searchQuery),
+          searchResults: computeSearchResults(withRoot, get().searchQuery),
         });
       },
 
@@ -242,12 +261,12 @@ export const useTreeStore = create<TreeState & TreeActions>()(
       deleteNode: (id) => {
         const { nodes, selectedNodeId } = get();
         const removed = removeNodeById(nodes, id);
-        const updatedNodes = autoLayout(removed);
+        // NO autoLayout — positions stay as they are
         const newSelectedId = selectedNodeId === id ? null : selectedNodeId;
         set({
-          nodes: updatedNodes,
+          nodes: removed,
           selectedNodeId: newSelectedId,
-          searchResults: computeSearchResults(updatedNodes, get().searchQuery),
+          searchResults: computeSearchResults(removed, get().searchQuery),
         });
       },
 
@@ -276,6 +295,13 @@ export const useTreeStore = create<TreeState & TreeActions>()(
         set({ nodes: updatedNodes });
       },
 
+      /* ── Reorganize layout (destructive — resets all manual positions) ── */
+      reorganizeLayout: () => {
+        const { nodes } = get();
+        const layouted = autoLayout(nodes);
+        set({ nodes: layouted });
+      },
+
       /* ── Reset ──
          createDefaultTree() already applies autoLayout() internally,
          so we don't need to call it again here. */
@@ -294,13 +320,27 @@ export const useTreeStore = create<TreeState & TreeActions>()(
     }),
     {
       name: "matrix-epem-tree-v3",
+      version: 1,
       // Only persist the core data, not transient UI state like search
       partialize: (state) => ({
         nodes: state.nodes,
         selectedNodeId: state.selectedNodeId,
         expandedNodeIds: state.expandedNodeIds,
       }),
-      // On rehydration, if nodes are empty, seed with default data
+      // Migration: if we detect old data format, reset to defaults
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0) {
+          // Version 0 had the old layout with autoLayout on every CRUD
+          // Reset to fresh data with new layout
+          const defaultNodes = createDefaultTree();
+          return {
+            ...persistedState,
+            nodes: defaultNodes,
+            expandedNodeIds: collectFolderIds(defaultNodes),
+          };
+        }
+        return persistedState;
+      },
       onRehydrateStorage: () => (state) => {
         if (state && state.nodes.length === 0) {
           // createDefaultTree() already includes layout (autoLayout called internally)
@@ -308,9 +348,12 @@ export const useTreeStore = create<TreeState & TreeActions>()(
           state.nodes = defaultNodes;
           state.expandedNodeIds = collectFolderIds(defaultNodes);
         } else if (state) {
-          // Re-apply layout for existing persisted nodes in case
-          // layout constants (NODE_WIDTH, NODE_HEIGHT, gaps) changed
-          state.nodes = autoLayout(state.nodes);
+          // Re-apply layout only if nodes exist but may lack positions
+          // Only if a node has no position at all
+          const needsLayout = checkIfNodesNeedLayout(state.nodes);
+          if (needsLayout) {
+            state.nodes = autoLayout(state.nodes);
+          }
         }
       },
     },

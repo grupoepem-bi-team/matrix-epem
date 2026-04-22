@@ -6,44 +6,20 @@ import React, {
   useEffect,
 } from "react";
 import { useTreeStore } from "../../store/useTreeStore";
+import { flattenAll, collectEdges, buildNodeMap } from "../../utils/tree";
+import type { TreeNode, Position } from "../../types";
 import { NodeCard, NODE_WIDTH, NODE_HEIGHT } from "./NodeCard";
 import { ConnectionLine } from "./ConnectionLine";
-import type { TreeNode, Position } from "../../types";
 
 /* ── Props ─────────────────────────────────────── */
 
 interface CanvasProps {
   onNodeSelect: (nodeId: string) => void;
   onNodeMove: (nodeId: string, position: Position) => void;
+  onReorganize?: () => void;
 }
 
-/* ── Tree helpers ───────────────────────────────── */
-
-/** Flatten every node in the tree (depth-first, no filtering). */
-const flattenAll = (nodeList: TreeNode[], out: TreeNode[] = []): TreeNode[] => {
-  for (const n of nodeList) {
-    out.push(n);
-    if (n.children.length > 0) flattenAll(n.children, out);
-  }
-  return out;
-};
-
-interface Edge {
-  id: string;
-  sourceId: string;
-  targetId: string;
-}
-
-/** Collect every parent→child edge in the tree. */
-const collectEdges = (nodeList: TreeNode[], out: Edge[] = []): Edge[] => {
-  for (const n of nodeList) {
-    for (const c of n.children) {
-      out.push({ id: `${n.id}→${c.id}`, sourceId: n.id, targetId: c.id });
-      collectEdges([c], out);
-    }
-  }
-  return out;
-};
+/* ── Port helpers ───────────────────────────────── */
 
 /** Center of the OUTPUT port (right side) of a node. */
 const outputPort = (pos: Position): Position => ({
@@ -184,7 +160,11 @@ const Minimap: React.FC<{
 
 /* ── Canvas ─────────────────────────────────────── */
 
-export const Canvas: React.FC<CanvasProps> = ({ onNodeSelect, onNodeMove }) => {
+const CanvasInner: React.FC<CanvasProps> = ({
+  onNodeSelect,
+  onNodeMove,
+  onReorganize,
+}) => {
   const nodes = useTreeStore((s) => s.nodes);
   const selectedNodeId = useTreeStore((s) => s.selectedNodeId);
   const zoom = useTreeStore((s) => s.viewport.zoom);
@@ -226,6 +206,9 @@ export const Canvas: React.FC<CanvasProps> = ({ onNodeSelect, onNodeMove }) => {
   /* Show EVERY node and EVERY edge */
   const allNodes = useMemo(() => flattenAll(nodes), [nodes]);
   const allEdges = useMemo(() => collectEdges(nodes), [nodes]);
+
+  /* O(1) node lookup for edge rendering */
+  const nodeMap = useMemo(() => buildNodeMap(nodes), [nodes]);
 
   /* ── Wheel zoom (centered on cursor) ── */
   const handleWheel = useCallback(
@@ -356,6 +339,66 @@ export const Canvas: React.FC<CanvasProps> = ({ onNodeSelect, onNodeMove }) => {
         cursor: isPanning ? "grabbing" : "default",
       }}
     >
+      {/* ── Top bar with Reorganize button ── */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          padding: "10px 16px",
+          pointerEvents: "none",
+        }}
+      >
+        {onReorganize && (
+          <button
+            onClick={onReorganize}
+            style={{
+              pointerEvents: "auto",
+              background: "rgba(18, 18, 26, 0.92)",
+              color: "#e0e0e0",
+              border: "1px solid #2a2a40",
+              borderRadius: 6,
+              padding: "6px 14px",
+              fontSize: 13,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              backdropFilter: "blur(8px)",
+              transition: "background 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(40, 40, 58, 0.95)";
+              e.currentTarget.style.borderColor = "#ff6d5a";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(18, 18, 26, 0.92)";
+              e.currentTarget.style.borderColor = "#2a2a40";
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+            </svg>
+            Reorganize
+          </button>
+        )}
+      </div>
+
       {/* ── Dot grid background (does NOT zoom with the world,
              just pans and subtly scales the pattern) ── */}
       <div
@@ -399,8 +442,8 @@ export const Canvas: React.FC<CanvasProps> = ({ onNodeSelect, onNodeMove }) => {
           }}
         >
           {allEdges.map((edge) => {
-            const src = allNodes.find((n) => n.id === edge.sourceId);
-            const tgt = allNodes.find((n) => n.id === edge.targetId);
+            const src = nodeMap.get(edge.sourceId);
+            const tgt = nodeMap.get(edge.targetId);
             if (!src?.position || !tgt?.position) return null;
             const isActive =
               selectedNodeId === edge.sourceId ||
@@ -444,3 +487,5 @@ export const Canvas: React.FC<CanvasProps> = ({ onNodeSelect, onNodeMove }) => {
     </div>
   );
 };
+
+export const Canvas = React.memo(CanvasInner);

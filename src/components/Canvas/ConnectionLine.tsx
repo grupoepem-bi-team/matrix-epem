@@ -19,7 +19,7 @@ interface ConnectionLineProps {
  * points offset proportionally to the horizontal distance (minimum 60 px
  * curvature) to guarantee a graceful S-curve even for short connections.
  */
-export const ConnectionLine: React.FC<ConnectionLineProps> = ({
+const ConnectionLineInner: React.FC<ConnectionLineProps> = ({
   startX,
   startY,
   endX,
@@ -127,3 +127,10 @@ export const ConnectionLine: React.FC<ConnectionLineProps> = ({
     </g>
   );
 };
+
+/**
+ * ConnectionLine wrapped with React.memo.
+ * All props are primitives, so default shallow comparison is sufficient
+ * to prevent unnecessary re-renders.
+ */
+export const ConnectionLine = React.memo(ConnectionLineInner);

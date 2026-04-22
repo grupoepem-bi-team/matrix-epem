@@ -8,12 +8,16 @@ import {
   Database,
   X,
   RotateCcw,
+  LayoutGrid,
 } from "lucide-react";
 import { useTreeStore } from "./store/useTreeStore";
 import { Canvas } from "./components/Canvas/Canvas";
 import { NodeDetail } from "./components/Detail/NodeDetail";
 import { CreateNodeDialog } from "./components/Actions/CreateNodeDialog";
 import { EditNodeDialog } from "./components/Actions/EditNodeDialog";
+import { ConfirmDialog } from "./components/Actions/ConfirmDialog";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { findNodeById } from "./utils/tree";
 import type { Position } from "./types";
 
 /* ────────────────────────────────────────────── */
@@ -26,6 +30,10 @@ type DialogState =
   | { kind: "addChild"; parentId: string }
   | { kind: "addRoot" };
 
+type ConfirmState =
+  | { kind: "none" }
+  | { kind: "confirm"; nodeId: string; nodeName: string };
+
 /* ────────────────────────────────────────────── */
 /*  App component                                */
 /* ────────────────────────────────────────────── */
@@ -33,14 +41,19 @@ type DialogState =
 export const App: React.FC = () => {
   const [dialog, setDialog] = useState<DialogState>({ kind: "none" });
   const [showPanel, setShowPanel] = useState(false);
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    kind: "none",
+  });
 
   /* ── Store selectors ── */
+  const nodes = useTreeStore((s) => s.nodes);
   const deleteNode = useTreeStore((s) => s.deleteNode);
   const updateNodePosition = useTreeStore((s) => s.updateNodePosition);
   const zoom = useTreeStore((s) => s.viewport.zoom);
   const pan = useTreeStore((s) => s.viewport.pan);
   const updateViewport = useTreeStore((s) => s.updateViewport);
   const resetToDefault = useTreeStore((s) => s.resetToDefault);
+  const reorganizeLayout = useTreeStore((s) => s.reorganizeLayout);
   const selectedNodeId = useTreeStore((s) => s.selectedNodeId);
 
   /* ── Dialog handlers ── */
@@ -51,8 +64,20 @@ export const App: React.FC = () => {
   const handleAddRoot = () => setDialog({ kind: "addRoot" });
 
   const handleDelete = (nodeId: string) => {
-    deleteNode(nodeId);
-    setShowPanel(false);
+    const node = findNodeById(nodes, nodeId);
+    setConfirmState({
+      kind: "confirm",
+      nodeId,
+      nodeName: node?.name ?? "este nodo",
+    });
+  };
+
+  const confirmDelete = () => {
+    if (confirmState.kind === "confirm") {
+      deleteNode(confirmState.nodeId);
+      setShowPanel(false);
+    }
+    setConfirmState({ kind: "none" });
   };
 
   /* ── Canvas callbacks ── */
@@ -79,153 +104,182 @@ export const App: React.FC = () => {
     updateViewport({ zoom: 1, pan: { x: 80, y: 80 } });
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        width: "100vw",
-        overflow: "hidden",
-        background: "#12121a",
-      }}
-    >
-      {/* ══════════════════════════════════════════════ */}
-      {/*  TOP BAR                                      */}
-      {/* ══════════════════════════════════════════════ */}
-      <header className="app-topbar">
-        {/* Left – logo + workflow name */}
-        <div className="app-topbar__left">
-          <div className="app-topbar__logo">
-            <Database size={15} />
-          </div>
-          <span className="app-topbar__name">EPEM BI</span>
-          <span className="app-topbar__sep" />
-          <span className="app-topbar__wf">
-            Documentos
-            <ChevronDown size={13} style={{ marginLeft: 4, opacity: 0.5 }} />
-          </span>
-        </div>
-
-        {/* Right – actions */}
-        <div className="app-topbar__right">
-          <button
-            type="button"
-            className="n8n-btn n8n-btn--ghost n8n-btn--sm"
-            onClick={resetToDefault}
-            title="Reiniciar datos"
-          >
-            <RotateCcw size={13} />
-            Reiniciar
-          </button>
-          <button
-            type="button"
-            className="n8n-btn n8n-btn--primary"
-            onClick={handleAddRoot}
-          >
-            <Plus size={14} />
-            Agregar Nodo
-          </button>
-        </div>
-      </header>
-
-      {/* ══════════════════════════════════════════════ */}
-      {/*  CANVAS + RIGHT PANEL                         */}
-      {/* ══════════════════════════════════════════════ */}
+    <ErrorBoundary>
       <div
         style={{
-          flex: 1,
           display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+          width: "100vw",
           overflow: "hidden",
-          position: "relative",
+          background: "#12121a",
         }}
       >
-        {/* Canvas area */}
-        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          <Canvas onNodeSelect={handleNodeSelect} onNodeMove={handleNodeMove} />
+        {/* ══════════════════════════════════════════════ */}
+        {/*  TOP BAR                                      */}
+        {/* ══════════════════════════════════════════════ */}
+        <header className="app-topbar">
+          {/* Left – logo + workflow name */}
+          <div className="app-topbar__left">
+            <div className="app-topbar__logo">
+              <Database size={15} />
+            </div>
+            <span className="app-topbar__name">EPEM BI</span>
+            <span className="app-topbar__sep" />
+            <span className="app-topbar__wf">
+              Documentos
+              <ChevronDown size={13} style={{ marginLeft: 4, opacity: 0.5 }} />
+            </span>
+          </div>
 
-          {/* Zoom controls – bottom right */}
-          <div className="zoom-controls">
+          {/* Right – actions */}
+          <div className="app-topbar__right">
             <button
               type="button"
-              className="n8n-btn n8n-btn--icon"
-              onClick={handleZoomIn}
-              title="Acercar"
+              className="n8n-btn n8n-btn--ghost n8n-btn--sm"
+              onClick={reorganizeLayout}
+              title="Reorganizar layout"
             >
-              <ZoomIn size={15} />
+              <LayoutGrid size={13} />
+              Reorganizar
             </button>
-            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
             <button
               type="button"
-              className="n8n-btn n8n-btn--icon"
-              onClick={handleZoomOut}
-              title="Alejar"
+              className="n8n-btn n8n-btn--ghost n8n-btn--sm"
+              onClick={resetToDefault}
+              title="Reiniciar datos"
             >
-              <ZoomOut size={15} />
+              <RotateCcw size={13} />
+              Reiniciar
             </button>
-            <div className="zoom-divider" />
             <button
               type="button"
-              className="n8n-btn n8n-btn--icon"
-              onClick={handleFitView}
-              title="Restablecer vista"
+              className="n8n-btn n8n-btn--primary"
+              onClick={handleAddRoot}
             >
-              <Maximize2 size={15} />
+              <Plus size={14} />
+              Agregar Nodo
             </button>
           </div>
+        </header>
+
+        {/* ══════════════════════════════════════════════ */}
+        {/*  CANVAS + RIGHT PANEL                         */}
+        {/* ══════════════════════════════════════════════ */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            overflow: "hidden",
+            position: "relative",
+          }}
+        >
+          {/* Canvas area */}
+          <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+            <Canvas
+              onNodeSelect={handleNodeSelect}
+              onNodeMove={handleNodeMove}
+            />
+
+            {/* Zoom controls – bottom right */}
+            <div className="zoom-controls">
+              <button
+                type="button"
+                className="n8n-btn n8n-btn--icon"
+                onClick={handleZoomIn}
+                title="Acercar"
+              >
+                <ZoomIn size={15} />
+              </button>
+              <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+              <button
+                type="button"
+                className="n8n-btn n8n-btn--icon"
+                onClick={handleZoomOut}
+                title="Alejar"
+              >
+                <ZoomOut size={15} />
+              </button>
+              <div className="zoom-divider" />
+              <button
+                type="button"
+                className="n8n-btn n8n-btn--icon"
+                onClick={handleFitView}
+                title="Restablecer vista"
+              >
+                <Maximize2 size={15} />
+              </button>
+            </div>
+          </div>
+
+          {/* ── Node detail panel (right sidebar) ── */}
+          {showPanel && selectedNodeId && (
+            <aside className="detail-panel">
+              <button
+                type="button"
+                className="detail-panel__close"
+                onClick={() => setShowPanel(false)}
+                title="Cerrar panel"
+              >
+                <X size={16} />
+              </button>
+              <NodeDetail
+                onEdit={handleEdit}
+                onAddChild={handleAddChild}
+                onDelete={handleDelete}
+              />
+            </aside>
+          )}
         </div>
 
-        {/* ── Node detail panel (right sidebar) ── */}
-        {showPanel && selectedNodeId && (
-          <aside className="detail-panel">
-            <button
-              type="button"
-              className="detail-panel__close"
-              onClick={() => setShowPanel(false)}
-              title="Cerrar panel"
-            >
-              <X size={16} />
-            </button>
-            <NodeDetail
-              onEdit={handleEdit}
-              onAddChild={handleAddChild}
-              onDelete={handleDelete}
-            />
-          </aside>
+        {/* ══════════════════════════════════════════════ */}
+        {/*  DIALOGS                                      */}
+        {/* ══════════════════════════════════════════════ */}
+        {dialog.kind === "edit" && (
+          <div
+            className="modal-overlay"
+            onClick={(e) => e.target === e.currentTarget && handleClose()}
+          >
+            <div className="modal-backdrop" />
+            <div className="modal-content animate-slide-up">
+              <EditNodeDialog nodeId={dialog.nodeId} onClose={handleClose} />
+            </div>
+          </div>
+        )}
+
+        {(dialog.kind === "addChild" || dialog.kind === "addRoot") && (
+          <div
+            className="modal-overlay"
+            onClick={(e) => e.target === e.currentTarget && handleClose()}
+          >
+            <div className="modal-backdrop" />
+            <div className="modal-content animate-slide-up">
+              <CreateNodeDialog
+                parentId={
+                  dialog.kind === "addChild" ? dialog.parentId : undefined
+                }
+                onClose={handleClose}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════ */}
+        {/*  CONFIRM DIALOG                               */}
+        {/* ══════════════════════════════════════════════ */}
+        {confirmState.kind === "confirm" && (
+          <ConfirmDialog
+            title="Eliminar nodo"
+            message={`¿Estás seguro de que querés eliminar "${confirmState.nodeName}"? Esta acción no se puede deshacer.`}
+            confirmLabel="Eliminar"
+            cancelLabel="Cancelar"
+            variant="danger"
+            onConfirm={confirmDelete}
+            onCancel={() => setConfirmState({ kind: "none" })}
+          />
         )}
       </div>
-
-      {/* ══════════════════════════════════════════════ */}
-      {/*  DIALOGS                                      */}
-      {/* ══════════════════════════════════════════════ */}
-      {dialog.kind === "edit" && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => e.target === e.currentTarget && handleClose()}
-        >
-          <div className="modal-backdrop" />
-          <div className="modal-content animate-slide-up">
-            <EditNodeDialog nodeId={dialog.nodeId} onClose={handleClose} />
-          </div>
-        </div>
-      )}
-
-      {(dialog.kind === "addChild" || dialog.kind === "addRoot") && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => e.target === e.currentTarget && handleClose()}
-        >
-          <div className="modal-backdrop" />
-          <div className="modal-content animate-slide-up">
-            <CreateNodeDialog
-              parentId={
-                dialog.kind === "addChild" ? dialog.parentId : undefined
-              }
-              onClose={handleClose}
-            />
-          </div>
-        </div>
-      )}
-    </div>
+    </ErrorBoundary>
   );
 };
 

@@ -16,7 +16,7 @@ interface NodeCardProps {
   onDragEnd: (nodeId: string, position: Position) => void;
 }
 
-export const NodeCard: React.FC<NodeCardProps> = ({
+const NodeCard: React.FC<NodeCardProps> = ({
   node,
   isSelected,
   position,
@@ -208,3 +208,16 @@ export const NodeCard: React.FC<NodeCardProps> = ({
     </div>
   );
 };
+
+/* ── React.memo with custom comparator ──────────── */
+const NodeCardMemo = React.memo(NodeCard, (prev, next) => {
+  return (
+    prev.node.id === next.node.id &&
+    prev.isSelected === next.isSelected &&
+    prev.position.x === next.position.x &&
+    prev.position.y === next.position.y &&
+    prev.zoom === next.zoom
+  );
+});
+
+export { NodeCardMemo as NodeCard };
