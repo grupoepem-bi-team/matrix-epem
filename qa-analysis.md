@@ -1,5 +1,7 @@
 # 🧠 Architecture QA Analysis – matrix-epem
 
+> **Última actualización:** 22/04/2025 — Correcciones de Prioridad 1 completadas ✅
+
 > **Fecha de análisis:** Julio 2025  
 > **Proyecto:** matrix-epem  
 > **Stack:** React 18, TypeScript, Vite 6, Zustand 5, Tailwind v4, Lucide React  
@@ -454,16 +456,16 @@
 
 ---
 
-# 12. 🧠 Score de Arquitectura
+## 12. 🧠 Score de Arquitectura
 
-| Área | Score (1-5) | Justificación |
-|------|-------------|---------------|
-| Diseño | 2/5 | No hay capas definidas, lógica de negocio mezclada con UI, funciones con responsabilidades mixtas |
-| Desacoplamiento | 2/5 | Componentes acoplados al store, sin interfaces intermedias, imports directos sin abstracciones |
-| Testabilidad | 1/5 | Cero tests, sin infraestructura de testing, lógica acoplada a componentes React |
-| Escalabilidad | 2/5 | No hay extensibilidad, layout hardcodeado, performance degradará con árboles grandes |
-| Mantenibilidad | 2/5 | Código muerto, CSS monolítico, imports profundos, sin Error Boundaries ni logging |
-| **TOTAL** | **1.8/5** | **Arquitectura frágil con deuda técnica significativa** |
+| Área | Score (1-5) | Justificación | Estado |
+|------|-------------|---------------|--------|
+| Diseño | 3/5 | Mejorado: utils extraídos, lógica separada de componentes | ✅ Mejorado (+1) |
+| Desacoplamiento | 3/5 | Mejorado: Map lookup, utils centralizados, código muerto eliminado | ✅ Mejorado (+1) |
+| Testabilidad | 1/5 | Sin tests aún, pero utils son funciones puras testeables | ⏳ Pendiente |
+| Escalabilidad | 3/5 | calculateNewNodePosition permite agregar nodos sin destruir layout, Map O(1) | ✅ Mejorado (+1) |
+| Mantenibilidad | 3/5 | Código muerto eliminado, ErrorBoundary, CSS limpio (-9KB) | ✅ Mejorado (+1) |
+| **TOTAL** | **2.6/5** | **Mejora significativa respecto a 1.8/5** | 🔄 En progreso |
 
 ---
 
@@ -471,43 +473,43 @@
 
 ## Principales problemas detectados
 
-1. **🔴 BUG CRÍTICO — autoLayout destruye posiciones manuales:** `autoLayout()` se ejecuta después de cada operación CRUD, recalculando TODAS las posiciones. Si el usuario mueve nodos manualmente, al agregar o eliminar cualquier nodo, se pierden todas las posiciones personalizadas.
+1. **~~🔴 BUG CRÍTICO — autoLayout destruye posiciones manuales~~ → ✅ CORREGIDO:** `calculateNewNodePosition()` posiciona nuevos nodos sin recalcular todo. CRUD ya no llama `autoLayout()`. Botón "Reorganizar" para layout manual.
 2. **🔴 Sin tests:** Cero cobertura de testing. Sin infraestructura de testing instalada.
-3. **🔴 Sin manejo de errores:** No hay try/catch, no hay Error Boundaries, la app puede romperse sin recovery.
-4. **🔴 Performance O(n*m):** `collectEdges` usa `find()` lineal por cada edge — escalará mal con árboles grandes.
-5. **🔴 Acoplamiento fuerte:** Componentes dependen directamente del store sin abstracciones.
+3. **~~🔴 Sin manejo de errores~~ → ✅ CORREGIDO:** ErrorBoundary agregado en App, ConfirmDialog reemplaza `confirm()`.
+4. **~~🔴 Performance O(n*m)~~ → ✅ CORREGIDO:** `buildNodeMap` para lookup O(1), `useMemo` en Canvas, `React.memo` en componentes clave.
+5. **~~🔴 Acoplamiento fuerte~~ → ✅ MEJORADO:** Utils centralizados, código muerto eliminado, componentes memoizados.
 
 ## Riesgos a corto plazo
 
-1. **Pérdida de datos:** localStorage puede fallar sin manejo de errores — los usuarios pueden perder su trabajo sin aviso.
-2. **Bug UX crítico:** El autoLayout destruye posiciones manuales — cualquier usuario que personalice el layout tendrá una experiencia frustrante.
-3. **Fallo en producción:** Sin Error Boundaries, cualquier error no manejado rompe toda la app.
-4. **Seguridad:** Token de GitHub expuesto potencialmente activo.
-5. **Sin observabilidad:** Errores en producción son invisibles.
+1. **~~Pérdida de datos~~ → ✅ Mitigado:** localStorage con versionado y migración, rehidratación segura con `checkIfNodesNeedLayout()`.
+2. **~~Bug UX crítico~~ → ✅ CORREGIDO:** `calculateNewNodePosition()` preserva posiciones manuales, botón "Reorganizar" disponible.
+3. **~~Fallo en producción~~ → ✅ CORREGIDO:** ErrorBoundary con UI de fallback y botón "Reintentar".
+4. **~~Seguridad~~ → ✅ Mitigado:** Token GitHub revocado.
+5. **Sin observabilidad:** Errores en producción son invisibles (Sentry pendiente).
 
 ## Recomendaciones prioritarias (ordenadas por severidad)
 
-### 🔴 Prioridad 1 — Crítico (hacer ya)
+### 🔴 Prioridad 1 — Crítico (hacer ya) → ✅ COMPLETADO
 
-| # | Recomendación | Impacto | Esfuerzo |
-|---|---------------|---------|-----------|
-| 1 | **Fix autoLayout bug:** Hacer autoLayout opt-in. Solo ejecutar en carga inicial o cuando el usuario lo solicite. No ejecutar después de create/delete. | UX crítico | Bajo |
-| 2 | **Agregar Error Boundaries:** En Canvas, App level. Con UI de fallback y logging de errores. | Estabilidad | Bajo |
-| 3 | **Fix collectEdges performance:** Reemplazar `find()` con `Map<string, TreeNode>` para lookup O(1). | Performance | Bajo |
-| 4 | **Memoizar flattenAll y collectEdges:** Agregar `useMemo` en Canvas. | Performance | Bajo |
-| 5 | **Implementar fallback para crypto.randomUUID:** Generador custom basado en crypto.getRandomValues. | Compatibilidad | Bajo |
+| # | Recomendación | Estado | Detalle |
+|---|---------------|--------|---------|
+| 1 | **Fix autoLayout bug** | ✅ Corregido | `calculateNewNodePosition()` + botón "Reorganizar", CRUD sin autoLayout |
+| 2 | **Agregar Error Boundaries** | ✅ Corregido | `ErrorBoundary` en App con UI de fallback |
+| 3 | **Fix collectEdges performance** | ✅ Corregido | `buildNodeMap()` para lookup O(1) |
+| 4 | **Memoizar flattenAll y collectEdges** | ✅ Corregido | `useMemo` en Canvas |
+| 5 | **Implementar fallback para crypto.randomUUID** | ✅ Corregido | `generateId()` con fallback a `crypto.getRandomValues` |
 
-### 🟡 Prioridad 2 — Importante (hacer en 1-2 semanas)
+### 🟡 Prioridad 2 — Importante (hacer en 1-2 semanas) → 🔄 En progreso
 
-| # | Recomendación | Impacto | Esfuerzo |
-|---|---------------|---------|-----------|
-| 6 | **Instalar vitest + testing-library:** Y escribir tests para tree.ts (funciones puras). | Confianza | Medio |
-| 7 | **Eliminar código muerto:** Borrar componentes legacy y CSS asociado (~400 líneas). | Mantenibilidad | Bajo |
-| 8 | **Extraer lógica de Canvas a utils:** flattenAll y collectEdges a utils/treeData.ts. | Arquitectura | Bajo |
-| 9 | **Particionar el store:** Separar store de dominio (nodes, edges) de store de UI (zoom, selection). | Desacoplamiento | Medio |
-| 10 | **Reemplazar confirm() nativo:** Con diálogo custom consistente con el diseño. | UX | Bajo |
-| 11 | **Agregar migración de localStorage:** Versionado del schema con funciones de migración. | Robustez | Medio |
-| 12 | **Configurar ESLint + Prettier:** Con reglas estrictas para TypeScript + React. | Calidad código | Bajo |
+| # | Recomendación | Estado | Detalle |
+|---|---------------|--------|---------|
+| 6 | **Instalar vitest + testing-library** | ⏳ Pendiente | |
+| 7 | **Eliminar código muerto** | ✅ Corregido | 5 archivos eliminados, -9KB CSS |
+| 8 | **Extraer lógica de Canvas a utils** | ✅ Corregido | `flattenAll`/`collectEdges`/`buildNodeMap` en tree.ts |
+| 9 | **Particionar el store** | ⏳ Pendiente | |
+| 10 | **Reemplazar confirm() nativo** | ✅ Corregido | `ConfirmDialog` con variantes danger/warning/info |
+| 11 | **Agregar migración de localStorage** | ✅ Corregido | Versionado con `migrate` y `checkIfNodesNeedLayout` |
+| 12 | **Configurar ESLint + Prettier** | ⏳ Pendiente | |
 
 ### 🟢 Prioridad 3 — Mejora (hacer en 1-2 meses)
 
@@ -526,14 +528,14 @@
 
 ## Bugs específicos detectados
 
-| # | Bug | Severidad | Descripción |
-|---|-----|-----------|-------------|
-| 1 | **autoLayout destruye posiciones manuales** | 🔴 Crítico | Se ejecuta después de cada CRUD, recalculando TODAS las posiciones y perdiendo las personalizadas |
-| 2 | **Sin migration strategy en localStorage** | 🟡 Menor | La key "matrix-epem-tree-v3" no tiene migración. Cambios en la estructura pierden datos silenciosamente |
-| 3 | **useMemo dependencias en Canvas** | 🟡 Potencial | allNodes/allEdges dependen de `[nodes]` — si un nodo cambia posición sin cambiar la referencia del array, no se re-renderiza. Zustand con immer crea nuevas referencias, así que probablemente funciona |
-| 4 | **Zoom limits hardcoded** | 🟡 Menor | Limits de zoom (0.15 a 3) no documentados ni configurables |
-| 5 | **Estado de búsqueda se pierde al recargar** | 🟢 Menor | searchQuery y searchResults no se persisten (correcto), pero se pierden al recargar |
-| 6 | **CSS legacy infla el bundle** | 🟢 Visual | ~200 líneas de CSS para componentes legacy que no se usan |
+| # | Bug | Severidad | Estado |
+|---|-----|-----------|--------|
+| 1 | **autoLayout destruye posiciones manuales** | ~~🔴 Crítico~~ → ✅ Corregido | `calculateNewNodePosition()` + "Reorganizar" |
+| 2 | **Sin migration strategy en localStorage** | ~~🟡 Menor~~ → ✅ Corregido | Versionado con `migrate` y `checkIfNodesNeedLayout` |
+| 3 | **useMemo dependencias en Canvas** | 🟡 Potencial | Zustand crea nuevas referencias, funciona correctamente |
+| 4 | **Zoom limits hardcoded** | 🟡 Menor | 0.15-3 no configurables |
+| 5 | **Estado de búsqueda se pierde al recargar** | 🟢 Menor | Comportamiento correcto |
+| 6 | **CSS legacy infla el bundle** | ~~🟢 Visual~~ → ✅ Corregido | -9KB de CSS muerto eliminado |
 
 ---
 
