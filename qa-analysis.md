@@ -1,6 +1,6 @@
 # 🧠 Architecture QA Analysis – matrix-epem
 
-> **Última actualización:** 22/04/2025 — Correcciones de Prioridad 1 completadas ✅
+> **Última actualización:** Julio 2025 — Prioridad 3 completada (modularización + registry + fixes) ✅
 
 > **Fecha de análisis:** Julio 2025  
 > **Proyecto:** matrix-epem  
@@ -21,13 +21,13 @@
 - [❌] ¿Hay lógica de negocio en controladores o servicios externos?  
   **NO hay servicios externos, pero SÍ hay lógica de negocio en los componentes.** El store (`useTreeStore.ts`, 300+ líneas) mezcla state management con lógica de negocio: `autoLayout` y `createDefaultTree` son llamados dentro del store. Las acciones del store no son puras — `createChildNode` llama internamente a `autoLayout` + `expandNode`, combinando mutating state con side effects.
 
-- [❌] ¿Existen módulos con múltiples responsabilidades (God classes)?  
-  **SÍ.** `utils/tree.ts` tiene 280+ líneas con responsabilidades mixtas:  
-  - Creación de datos (`createDefaultTree`)  
-  - Manipulación de datos (`addNodeToParent`, `removeNodeById`)  
-  - Cálculo de layout (`autoLayout`, `calcSubtreeHeight`)  
-  - Búsqueda (`searchNodes`)  
-  Este archivo debería estar dividido en al menos 3 módulos: `treeData.ts`, `treeLayout.ts`, `treeSearch.ts`.
+- [✅] ¿Hay módulos con múltiples responsabilidades (God classes)?  
+  **CORREGIDO.** `utils/tree.ts` fue dividido en 3 módulos con responsabilidad única:  
+  - `treeData.ts` — Creación y manipulación de datos (`createNode`, `addNodeToParent`, `removeNodeById`, `createDefaultTree`)  
+  - `treeLayout.ts` — Cálculo de layout (`autoLayout`, `calcSubtreeHeight`, `calculateNewNodePosition`, constantes)  
+  - `treeSearch.ts` — Búsqueda y traversal (`findNodeById`, `buildNodeMap`, `searchNodes`, `collectEdges`, etc.)  
+  - `tree.ts` — Barrel de re-exportación backward-compatible (marcado `@deprecated`)  
+  - `utils/index.ts` — Barrel para imports limpios desde `@/utils`
 
 - [✅] Los tipos están bien separados en `types/index.ts`.
 
@@ -384,7 +384,7 @@
 
 - [⚠️] **Componentes muertos:** `Sidebar.tsx`, `TreeView.tsx`, `TreeNode.tsx`, `TreeNodeItem.tsx` son componentes legacy de la fase 1 (tree view) que NO se usan en el canvas. Deberían eliminarse o moverse a una carpeta `legacy/`.
 
-- [❌] **CSS monolítico:** `globals.css` tiene 1200+ líneas — debería estar modularizado con CSS modules o separado por componente.
+- [✅] **CSS modularizado:** `globals.css` dividido en 6 archivos (theme, base, components, canvas, animations, globals) — mantenimiento mejorado.
 
 - [⚠️] **Funciones duplicadas:** El store tuvo funciones helper duplicadas (`collectAllFolderIds` y `collectFolderIds` hacían lo mismo) — indica falta de revisión de código.
 
@@ -406,9 +406,9 @@
 
 ## 10.1 Extensibilidad
 
-- [⚠️] Agregar un nuevo tipo de nodo requiere cambios en múltiples archivos (`types`, `tree utils`, `Canvas`, `NodeCard`, `NodeDetail`) — no sigue Open/Closed Principle.
+- [✅] Agregar un nuevo tipo de nodo ahora solo requiere `registerNodeType()` en el registry — sigue Open/Closed Principle. Los componentes (`NodeCard`, `NodeDetail`, `EditNodeDialog`, `CreateNodeDialog`) consumen la configuración dinámicamente via `getNodeTypeConfigOrDefault()` y `getAllNodeTypeConfigs()`.
 
-- [❌] No hay sistema de plugins ni extensibilidad — el sistema está cerrado a extensión sin modificación.
+- [✅] Se implementó un sistema de registry extensible (`src/registry/index.ts`): cada tipo de nodo define su icono, colores, etiquetas, badge y comportamiento (`canHaveChildren`, `getSubtitle`). Agregar un nuevo tipo solo requiere una llamada a `registerNodeType()`, sin modificar componentes.
 
 - [⚠️] El layout es horizontal L→R — si se quisiera vertical o radial, habría que reescribir `autoLayout` completamente.
 
@@ -463,9 +463,9 @@
 | Diseño | 3/5 | Mejorado: utils extraídos, lógica separada de componentes | ✅ Mejorado (+1) |
 | Desacoplamiento | 3/5 | Mejorado: hooks fachada, Map lookup, utils centralizados, código muerto eliminado | ✅ Mejorado (+1) |
 | Testabilidad | 3/5 | 113 tests pasando para tree.ts, infraestructura vitest configurada | ✅ Mejorado (+2) |
-| Escalabilidad | 3/5 | calculateNewNodePosition, Map O(1), path aliases para escalabilidad de archivos | ✅ Mejorado (+1) |
+| Escalabilidad | 4/5 | Registry extensible, tree modularizado, Map O(1), path aliases | ✅ Mejorado (+2) |
 | Mantenibilidad | 4/5 | CSS modularizado, ESLint+Prettier, código muerto eliminado, ErrorBoundary, hooks fachada | ✅ Mejorado (+2) |
-| **TOTAL** | **3.2/5** | **Arquitectura sólidamente mejorada respecto a 1.8/5** | ✅ Significativamente mejorado |
+| **TOTAL** | **3.4/5** | **Arquitectura sólidamente mejorada respecto a 1.8/5** | ✅ Significativamente mejorado |
 
 ---
 
@@ -515,14 +515,16 @@
 
 | # | Recomendación | Estado | Detalle |
 |---|---------------|--------|---------|
-| 13 | **Refactorizar tree.ts en módulos** | ⏳ Pendiente | treeData.ts, treeLayout.ts, treeSearch.ts |
-| 14 | **Implementar sistema de tipos de nodo** | ⏳ Pendiente | Registry con extensibilidad (esfuerzo alto) |
+| 13 | **Refactorizar tree.ts en módulos** | ✅ Corregido | treeData.ts, treeLayout.ts, treeSearch.ts + barrel re-exports |
+| 14 | **Implementar sistema de tipos de nodo** | ✅ Corregido | `src/registry/index.ts` — registerNodeType/getNodeTypeConfigOrDefault/getAllNodeTypeConfigs |
 | 15 | **Agregar path aliases** | ✅ Corregido | `@/` configurado en vite.config.ts + tsconfig.json |
 | 16 | **Modularizar globals.css** | ✅ Corregido | 6 archivos: theme, base, components, canvas, animations |
 | 17 | **Agregar React.memo en componentes clave** | ✅ Corregido | Canvas, NodeCard, ConnectionLine memoizados |
 | 18 | **Integrar Sentry** | ⏳ Pendiente | Requiere API key (esfuerzo medio) |
 | 19 | **Crear custom hooks fachada** | ✅ Corregido | `useTreeActions`, `useTreeSelection`, `useViewport` |
 | 20 | **Implementar Strategy para layout** | ⏳ Pendiente | Horizontal, Vertical, Radial intercambiables (esfuerzo alto) |
+| 21 | **Fix TS config y warnings** | ✅ Corregido | vite.config ESM-compatible, tsconfig limpio, Tailwind v4 shorthand syntax |
+| 22 | **Node type registry integrado en componentes** | ✅ Corregido | NodeCard, NodeDetail, EditNodeDialog, CreateNodeDialog usan registry dinámico |
 
 ---
 
@@ -540,5 +542,5 @@
 ---
 
 > **Documento generado como parte del análisis QA del proyecto matrix-epem.**
-> **Score final:** 3.2/5 (desde 1.8/5 inicial) — **Mejora de +1.4 puntos**
-> **Próximos pasos:** Implementar items restantes de Prioridad 3 (Sentry, layout strategy, node type registry).
+> **Score final:** 3.4/5 (desde 1.8/5 inicial) — **Mejora de +1.6 puntos**
+> **Próximos pasos:** Implementar items restantes de Prioridad 3 (Sentry, layout strategy).
