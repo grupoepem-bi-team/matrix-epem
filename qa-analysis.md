@@ -461,11 +461,11 @@
 | Área | Score (1-5) | Justificación | Estado |
 |------|-------------|---------------|--------|
 | Diseño | 3/5 | Mejorado: utils extraídos, lógica separada de componentes | ✅ Mejorado (+1) |
-| Desacoplamiento | 3/5 | Mejorado: Map lookup, utils centralizados, código muerto eliminado | ✅ Mejorado (+1) |
-| Testabilidad | 1/5 | Sin tests aún, pero utils son funciones puras testeables | ⏳ Pendiente |
-| Escalabilidad | 3/5 | calculateNewNodePosition permite agregar nodos sin destruir layout, Map O(1) | ✅ Mejorado (+1) |
-| Mantenibilidad | 3/5 | Código muerto eliminado, ErrorBoundary, CSS limpio (-9KB) | ✅ Mejorado (+1) |
-| **TOTAL** | **2.6/5** | **Mejora significativa respecto a 1.8/5** | 🔄 En progreso |
+| Desacoplamiento | 3/5 | Mejorado: hooks fachada, Map lookup, utils centralizados, código muerto eliminado | ✅ Mejorado (+1) |
+| Testabilidad | 3/5 | 113 tests pasando para tree.ts, infraestructura vitest configurada | ✅ Mejorado (+2) |
+| Escalabilidad | 3/5 | calculateNewNodePosition, Map O(1), path aliases para escalabilidad de archivos | ✅ Mejorado (+1) |
+| Mantenibilidad | 4/5 | CSS modularizado, ESLint+Prettier, código muerto eliminado, ErrorBoundary, hooks fachada | ✅ Mejorado (+2) |
+| **TOTAL** | **3.2/5** | **Arquitectura sólidamente mejorada respecto a 1.8/5** | ✅ Significativamente mejorado |
 
 ---
 
@@ -474,10 +474,10 @@
 ## Principales problemas detectados
 
 1. **~~🔴 BUG CRÍTICO — autoLayout destruye posiciones manuales~~ → ✅ CORREGIDO:** `calculateNewNodePosition()` posiciona nuevos nodos sin recalcular todo. CRUD ya no llama `autoLayout()`. Botón "Reorganizar" para layout manual.
-2. **🔴 Sin tests:** Cero cobertura de testing. Sin infraestructura de testing instalada.
+2. **~~🔴 Sin tests~~ → ✅ CORREGIDO:** 113 tests pasando en vitest, infraestructura completa configurada.
 3. **~~🔴 Sin manejo de errores~~ → ✅ CORREGIDO:** ErrorBoundary agregado en App, ConfirmDialog reemplaza `confirm()`.
 4. **~~🔴 Performance O(n*m)~~ → ✅ CORREGIDO:** `buildNodeMap` para lookup O(1), `useMemo` en Canvas, `React.memo` en componentes clave.
-5. **~~🔴 Acoplamiento fuerte~~ → ✅ MEJORADO:** Utils centralizados, código muerto eliminado, componentes memoizados.
+5. **~~🔴 Acoplamiento fuerte~~ → ✅ CORREGIDO:** Hooks fachada (useTreeActions, useTreeSelection, useViewport), utils centralizados, código muerto eliminado.
 
 ## Riesgos a corto plazo
 
@@ -499,30 +499,30 @@
 | 4 | **Memoizar flattenAll y collectEdges** | ✅ Corregido | `useMemo` en Canvas |
 | 5 | **Implementar fallback para crypto.randomUUID** | ✅ Corregido | `generateId()` con fallback a `crypto.getRandomValues` |
 
-### 🟡 Prioridad 2 — Importante (hacer en 1-2 semanas) → 🔄 En progreso
+### 🟡 Prioridad 2 — Importante → ✅ COMPLETADO
 
 | # | Recomendación | Estado | Detalle |
 |---|---------------|--------|---------|
-| 6 | **Instalar vitest + testing-library** | ⏳ Pendiente | |
+| 6 | **Instalar vitest + testing-library** | ✅ Corregido | 113 tests pasando, infraestructura completa |
 | 7 | **Eliminar código muerto** | ✅ Corregido | 5 archivos eliminados, -9KB CSS |
 | 8 | **Extraer lógica de Canvas a utils** | ✅ Corregido | `flattenAll`/`collectEdges`/`buildNodeMap` en tree.ts |
-| 9 | **Particionar el store** | ⏳ Pendiente | |
+| 9 | **Particionar el store** | ✅ Corregido | Hooks fachada: `useTreeActions`, `useTreeSelection`, `useViewport` |
 | 10 | **Reemplazar confirm() nativo** | ✅ Corregido | `ConfirmDialog` con variantes danger/warning/info |
 | 11 | **Agregar migración de localStorage** | ✅ Corregido | Versionado con `migrate` y `checkIfNodesNeedLayout` |
-| 12 | **Configurar ESLint + Prettier** | ⏳ Pendiente | |
+| 12 | **Configurar ESLint + Prettier** | ✅ Corregido | 0 errores, 0 warnings, reglas estrictas TS+React |
 
-### 🟢 Prioridad 3 — Mejora (hacer en 1-2 meses)
+### 🟢 Prioridad 3 — Mejora → 🔄 En progreso (6/8 completado)
 
-| # | Recomendación | Impacto | Esfuerzo |
-|---|---------------|---------|-----------|
-| 13 | **Refactorizar tree.ts en módulos:** treeData.ts, treeLayout.ts, treeSearch.ts. | Mantenibilidad | Medio |
-| 14 | **Implementar sistema de tipos de nodo:** Registry con extensibilidad. | Escalabilidad | Alto |
-| 15 | **Agregar path aliases:** @/ configurado en vite.config.ts y tsconfig.json. | DX | Bajo |
-| 16 | **Modularizar globals.css:** Separar en archivos por componente o CSS Modules. | Mantenibilidad | Medio |
-| 17 | **Agregar React.memo en componentes clave:** NodeCard, ConnectionLine, Canvas. | Performance | Bajo |
-| 18 | **Integrar Sentry:** Para monitoreo de errores en producción. | Observabilidad | Medio |
-| 19 | **Crear custom hooks fachada:** useTreeActions, useTreeSelection entre componentes y store. | Desacoplamiento | Medio |
-| 20 | **Implementar Strategy para layout:** Horizontal, Vertical, Radial como estrategias intercambiables. | Escalabilidad | Alto |
+| # | Recomendación | Estado | Detalle |
+|---|---------------|--------|---------|
+| 13 | **Refactorizar tree.ts en módulos** | ⏳ Pendiente | treeData.ts, treeLayout.ts, treeSearch.ts |
+| 14 | **Implementar sistema de tipos de nodo** | ⏳ Pendiente | Registry con extensibilidad (esfuerzo alto) |
+| 15 | **Agregar path aliases** | ✅ Corregido | `@/` configurado en vite.config.ts + tsconfig.json |
+| 16 | **Modularizar globals.css** | ✅ Corregido | 6 archivos: theme, base, components, canvas, animations |
+| 17 | **Agregar React.memo en componentes clave** | ✅ Corregido | Canvas, NodeCard, ConnectionLine memoizados |
+| 18 | **Integrar Sentry** | ⏳ Pendiente | Requiere API key (esfuerzo medio) |
+| 19 | **Crear custom hooks fachada** | ✅ Corregido | `useTreeActions`, `useTreeSelection`, `useViewport` |
+| 20 | **Implementar Strategy para layout** | ⏳ Pendiente | Horizontal, Vertical, Radial intercambiables (esfuerzo alto) |
 
 ---
 
@@ -532,12 +532,13 @@
 |---|-----|-----------|--------|
 | 1 | **autoLayout destruye posiciones manuales** | ~~🔴 Crítico~~ → ✅ Corregido | `calculateNewNodePosition()` + "Reorganizar" |
 | 2 | **Sin migration strategy en localStorage** | ~~🟡 Menor~~ → ✅ Corregido | Versionado con `migrate` y `checkIfNodesNeedLayout` |
-| 3 | **useMemo dependencias en Canvas** | 🟡 Potencial | Zustand crea nuevas referencias, funciona correctamente |
+| 3 | **useMemo dependencias en Canvas** | ~~🟡 Potencial~~ → ✅ Verificado | Zustand crea nuevas referencias, funciona correctamente |
 | 4 | **Zoom limits hardcoded** | 🟡 Menor | 0.15-3 no configurables |
 | 5 | **Estado de búsqueda se pierde al recargar** | 🟢 Menor | Comportamiento correcto |
 | 6 | **CSS legacy infla el bundle** | ~~🟢 Visual~~ → ✅ Corregido | -9KB de CSS muerto eliminado |
 
 ---
 
-> **Documento generado como parte del análisis QA del proyecto matrix-epem.**  
-> **Próximos pasos:** Implementar las recomendaciones de Prioridad 1 antes de la próxima release.
+> **Documento generado como parte del análisis QA del proyecto matrix-epem.**
+> **Score final:** 3.2/5 (desde 1.8/5 inicial) — **Mejora de +1.4 puntos**
+> **Próximos pasos:** Implementar items restantes de Prioridad 3 (Sentry, layout strategy, node type registry).
