@@ -197,9 +197,11 @@ const CanvasInner: React.FC<CanvasProps> = ({ onNodeSelect, onNodeMove, onReorga
   /* O(1) node lookup for edge rendering */
   const nodeMap = useMemo(() => buildNodeMap(nodes), [nodes]);
 
-  /* ── Wheel zoom (centered on cursor) ── */
+  /* ── Wheel zoom (centered on cursor) ── *
+   * Registered via useEffect with { passive: false } to allow
+   * preventDefault(), which React's onWheel doesn't support. */
   const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+    (e: WheelEvent) => {
       e.preventDefault();
 
       const factor = e.deltaY > 0 ? 0.92 : 1.08;
@@ -230,6 +232,16 @@ const CanvasInner: React.FC<CanvasProps> = ({ onNodeSelect, onNodeMove, onReorga
     },
     [zoom, pan, updateViewport],
   );
+
+  /* Register wheel listener as non-passive so preventDefault() works */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, [handleWheel]);
 
   /* ── Pan: mousedown on empty canvas ── */
   const handleMouseDown = useCallback(
@@ -313,7 +325,6 @@ const CanvasInner: React.FC<CanvasProps> = ({ onNodeSelect, onNodeMove, onReorga
     <div
       ref={containerRef}
       className="canvas-container"
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
